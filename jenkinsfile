@@ -74,7 +74,7 @@ podTemplate(
                 sh 'oc project shared-services'
                 sh 'oc get pods'
                 sh 'oc project helm2'
-                sh 'oc start-build "mj-buildconfig" --from-repo="."'
+                sh 'oc start-build "mj-buildconfig" --from-dir="."'
                 }
 		}
     	
