@@ -22,13 +22,13 @@ podTemplate(
             find ${HOME}
             df -h
             """
-    }
-    stage('Checkout') {
-        container('jnlp') {
-            checkout scm
         }
-    }
-        
+        stage('Checkout') {
+            container('jnlp') {
+                checkout scm
+            }
+        }
+
 		container('ruby') {
             stage('Dependencies') {
                 //Ruby pre-requisites for unit tests.
@@ -84,6 +84,19 @@ podTemplate(
         container('ruby') {
             stage('More tests') {
                 sh 'ruby -v'
+            }
+        }
+        stage('Just master') {
+          sh """
+            pwd
+            env
+            find ${HOME}
+            df -h
+            """
+        }
+        stage('Checkout') {
+            container('jnlp') {
+                checkout scm
             }
         }
         
