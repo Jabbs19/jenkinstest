@@ -73,6 +73,8 @@ podTemplate(
                 sh 'oc login -u cluster-admin -p password https://lb.aheadaviation.local:8443 --insecure-skip-tls-verify'
                 sh 'oc project shared-services'
                 sh 'oc get pods'
+                sh 'oc project helm2'
+                sh 'oc start-build "mj-buildconfig" --from-repo="."'
                 }
 		}
     	
