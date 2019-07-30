@@ -15,6 +15,19 @@ podTemplate(
     ]
 ) {
     node(label) {
+        stage('Init') {
+          sh """
+            pwd
+            env
+            find ${HOME}
+            df -h
+            """
+    }
+    stage('Checkout') {
+        container('jnlp') {
+            checkout scm
+        }
+    }
         
 		container('ruby') {
             stage('Dependencies') {
@@ -31,17 +44,18 @@ podTemplate(
 				}
             
             stage('Run Tests') {
-					//rake/rspec?
+			//rake/rspec?
 			//	sh 'say = "I love Ruby"'
-              //  sh 'puts say'
+            //  sh 'puts say'
 			}
 			stage('Store Artifact'){
-			   // script{
-					//Are we going to still store in Artifacts?
-					//We can just run a bunch of shell commands in this "script{} block"
+			// script{
+			//Are we going to still store in Artifacts?
+			//We can just run a bunch of shell commands in this "script{} block"
 			 
 			}
         }
+
 		container('docker') {
             stage('Docker Build Image') {
 				//May need to mount daemon.sock?
