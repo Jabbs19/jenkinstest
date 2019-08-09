@@ -28,7 +28,7 @@ podTemplate(
             container('jnlp') {
                 checkout scm
 		
-	    def yaml = readYaml file: "jenkinstest/values.yaml"
+	    def yaml = readYaml file: 'jenkinstest/values.yaml'
 	    sh """
 	    echo $yaml
 	    echo ${yaml}
