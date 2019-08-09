@@ -26,59 +26,26 @@ podTemplate(
         stage('Checkout') {
             container('jnlp') {
                 checkout scm
-            }
-        }
-
-		container('ruby') {
-            stage('Dependencies') {
-                //Ruby pre-requisites for unit tests.
-				//Anything needed?
-				sh 'ruby -v'
-				sh 'echo $mj-test-desc'
-				sh 'echo $MJ-TEST-DESC'
-				sh 'echo ${mj-test-desc}'
-				sh 'echo ${MJ-TEST-DESC}'
-
-				
-				
-				}
-            
-            stage('Run Tests') {
-			//rake/rspec?
-			//	sh 'say = "I love Ruby"'
-            //  sh 'puts say'
-			}
-			stage('Store Artifact'){
-			// script{
-			//Are we going to still store in Artifacts?
-			//We can just run a bunch of shell commands in this "script{} block"
-			 
-			}
-        }
-
-		container('docker') {
-            stage('Docker Build Image') {
-				//May need to mount daemon.sock?
-                //sh 'docker info'
-                
-            }
-        }
 		
-		container('openshift') {
+	    yaml = readYaml file: "helm/helpline/values.yaml"
+            replica = yaml.replicaCount
+	    sh echo $replica
+	    $replica
+	    }
+        }
+	container('openshift') {
             stage('OC Build Image') {
                 sh 'oc whoami'
 				//sh "oc start-build ${APP_NAME} --from-dir=./_site/ --wait --follow"
-			}
-			stage('OC Deploy to Stage') {
+	    }
+	   stage('OC Deploy to Stage') {
                 sh 'oc login -u cluster-admin -p password https://lb.aheadaviation.local:8443 --insecure-skip-tls-verify'
                 sh 'oc project shared-services'
                 sh 'oc get pods'
-                sh 'oc project helm2'
-                sh 'oc start-build "mj-buildconfig" --from-dir="."'
                 }
-		}
+	 }
     	
-		container('helm') {
+	container('helm') {
             stage('package charts') {
                 sh 'helm help'
             }
@@ -86,19 +53,6 @@ podTemplate(
         container('ruby') {
             stage('More tests') {
                 sh 'ruby -v'
-            }
-        }
-        stage('Just master') {
-          sh """
-            pwd
-            env
-            find ${HOME}
-            df -h
-            """
-        }
-        stage('Checkout') {
-            container('jnlp') {
-                checkout scm
             }
         }
         
