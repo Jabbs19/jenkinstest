@@ -29,8 +29,10 @@ podTemplate(
 		
 	    def yaml = readYaml file: "jenkinstest/values.yaml"
             replica = yaml.replicaCount
-	    sh echo $replica
+	    sh 'echo $replica'
+	    sh 'echo ${replica}'
 	    $replica
+	    ${replica}
 	    }
         }
 	container('openshift') {
