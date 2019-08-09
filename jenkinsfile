@@ -45,8 +45,10 @@ podTemplate(
 	  
            
 	    def newValuesYaml = readYaml file: 'jenkinstest/values.yaml'
-	    def newTag = newValuesYaml.version.toString()
-	    echo newTag
+	    def newTag = newValuesYaml.image.tag.toString()
+	    sh """
+	    echo ${newTag}
+	    """
 	    
 	   sh """
 	    echo 'end of echos'
