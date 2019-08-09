@@ -28,11 +28,16 @@ podTemplate(
                 checkout scm
 		
 	    def yaml = readYaml file: "jenkinstest/values.yaml"
+	    sh """
+	    echo $yaml
+	    echo ${yaml}
+	    echo yaml.replicaCount
             replica = yaml.replicaCount
-	    sh 'echo $replica'
-	    sh 'echo ${replica}'
+	    echo $replica
+	    echo ${replica}
 	    $replica
 	    ${replica}
+	    """
 	    }
         }
 	container('openshift') {
