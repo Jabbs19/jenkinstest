@@ -34,7 +34,8 @@ podTemplate(
 	    
 	    def yaml = readYaml file: 'jenkinstest/Chart.yaml'
 	    echo yaml.version.toString()
-	    version = yaml.version.toString()
+	    def version = yaml.version.toString()
+	    echo '$version'
 	    sh 'echo $version'
 	    sh 'echo ${version}'
 	    sh 'echo ${yaml}'
