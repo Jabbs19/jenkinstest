@@ -42,7 +42,7 @@ podTemplate(
 	    echo $version
 	    echo ${version}
 	    echo version
-	    sh """
+	  
 	    echo 'end of echos'
 	    """
 	    }
