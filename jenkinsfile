@@ -34,13 +34,6 @@ podTemplate(
 	    sh """
 	    echo 'past yaml'
 	    """
-	    sh ""
-	    
-	    echo ${yaml}
-	    echo yaml.replicaCount
-            echo $replica
-	    echo ${replica}
-	    """
 	    }
         }
 	container('openshift') {
