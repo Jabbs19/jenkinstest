@@ -34,6 +34,10 @@ podTemplate(
 	    
 	    def chartYaml = readYaml file: 'jenkinstest/Chart.yaml'
 	    def chartVersion = chartYaml.version.toString()
+	    if (chartVersion == "0.1.0") {
+              //Failed to parse yaml?  Fail push??  Parse some other way.
+	      echo 'chartversion matched'
+            }
 	    sh """
 	    echo ${chartVersion}
 	    """
