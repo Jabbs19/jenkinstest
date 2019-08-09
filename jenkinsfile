@@ -30,8 +30,12 @@ podTemplate(
                 checkout scm
 		
 	    def yaml = readYaml file: 'jenkinstest/values.yaml'
+	    sh 'echo $yaml'
 	    sh """
-	    echo $yaml
+	    echo 'past yaml'
+	    """
+	    sh ""
+	    
 	    echo ${yaml}
 	    echo yaml.replicaCount
             echo $replica
