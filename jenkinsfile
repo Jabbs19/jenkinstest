@@ -21,6 +21,7 @@ podTemplate(
             env
             find ${HOME}
             df -h
+	    echo 'itsworking'
             """
         }
         stage('Checkout') {
