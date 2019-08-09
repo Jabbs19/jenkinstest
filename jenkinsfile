@@ -32,17 +32,25 @@ podTemplate(
             	//echo datas.ear_file.deploy.toString()
 	    
 	    
-	    def yaml = readYaml file: 'jenkinstest/Chart.yaml'
-	    echo yaml.version.toString()
-	    def version = yaml.version.toString()
-	    echo '$version'
-	    echo version
-           
-	   sh """
-	    echo $version
-	    echo ${version}
-	    echo version
+	    def chartYaml = readYaml file: 'jenkinstest/Chart.yaml'
+	    def chartVersion = chartYaml.version.toString()
+	    sh """
+	    echo ${chartVersion}
+	    echo chartVersion
+
+	    """
+	    
+	    def valuesYaml = readYaml file: 'jenkinstest/values.yaml'
+	    valuesYaml.image.tag = 'marktest'
+            sh "rm -f jenkinstest/values.yaml"
+            writeYaml file: "jenkinstest/values.yaml", data: yaml
 	  
+           
+	    def newValuesYaml = readYaml file: 'jenkinstest/values.yaml'
+	    def newTag = newValuesYaml.version.toString()
+	    echo newTag
+	    
+	   sh """
 	    echo 'end of echos'
 	    """
 	    }
