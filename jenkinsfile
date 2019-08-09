@@ -31,6 +31,10 @@ podTemplate(
 		
 	    def yaml = readYaml file: 'jenkinstest/values.yaml'
 	    sh 'echo $yaml'
+	    sh 'echo ${yaml}'
+	    sh """
+	    echo yaml.replicaCount
+	    """	
 	    sh """
 	    echo 'past yaml'
 	    """
