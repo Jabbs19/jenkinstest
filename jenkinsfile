@@ -32,9 +32,12 @@ podTemplate(
             	//echo datas.ear_file.deploy.toString()
 	    
 	    
-	    def yaml = readYaml file: 'jenkinstest/values.yaml'
-	    echo yaml.replicaCount.toString()
-	    sh 'echo $yaml'
+	    def yaml = readYaml file: 'jenkinstest/Chart.yaml'
+	    echo yaml.version.toString()
+	    version = yaml.version.toString()
+	    echo $version
+	    echo ${version}
+	    sh 'echo $version'
 	    sh 'echo ${yaml}'
 	    sh """
 	    echo yaml.replicaCount
