@@ -36,6 +36,7 @@ podTemplate(
 	    echo yaml.version.toString()
 	    version = yaml.version.toString()
 	    sh 'echo $version'
+	    sh 'echo ${version}'
 	    sh 'echo ${yaml}'
 	    sh """
 	    echo yaml.replicaCount
