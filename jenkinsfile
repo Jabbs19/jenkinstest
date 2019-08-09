@@ -27,7 +27,7 @@ podTemplate(
             container('jnlp') {
                 checkout scm
 		
-	    yaml = readYaml file: "jenkinstest/values.yaml"
+	    def yaml = readYaml file: "jenkinstest/values.yaml"
             replica = yaml.replicaCount
 	    sh echo $replica
 	    $replica
