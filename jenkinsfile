@@ -36,14 +36,12 @@ podTemplate(
 	    def chartVersion = chartYaml.version.toString()
 	    sh """
 	    echo ${chartVersion}
-	    echo chartVersion
-
 	    """
 	    
 	    def valuesYaml = readYaml file: 'jenkinstest/values.yaml'
 	    valuesYaml.image.tag = 'marktest'
             sh "rm -f jenkinstest/values.yaml"
-            writeYaml file: "jenkinstest/values.yaml", data: yaml
+            writeYaml file: "jenkinstest/values.yaml", data: valuesYaml
 	  
            
 	    def newValuesYaml = readYaml file: 'jenkinstest/values.yaml'
