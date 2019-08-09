@@ -28,8 +28,12 @@ podTemplate(
         stage('Checkout') {
             container('maven') {
                 checkout scm
-		
+		//script{ datas = readYaml (file: 'manifest.yml') }
+            	//echo datas.ear_file.deploy.toString()
+	    
+	    
 	    def yaml = readYaml file: 'jenkinstest/values.yaml'
+	    echo yaml.replicaCount.toString()
 	    sh 'echo $yaml'
 	    sh 'echo ${yaml}'
 	    sh """
