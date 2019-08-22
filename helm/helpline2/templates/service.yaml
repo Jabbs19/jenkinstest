@@ -1,9 +1,9 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "jenkinstest.fullname" . }}
+  name: {{ include "helpline2.fullname" . }}
   labels:
-{{ include "jenkinstest.labels" . | indent 4 }}
+{{ include "helpline2.labels" . | indent 4 }}
 spec:
   type: {{ .Values.service.type }}
   ports:
@@ -12,5 +12,5 @@ spec:
       protocol: TCP
       name: http
   selector:
-    app.kubernetes.io/name: {{ include "jenkinstest.name" . }}
+    app.kubernetes.io/name: {{ include "helpline2.name" . }}
     app.kubernetes.io/instance: {{ .Release.Name }}

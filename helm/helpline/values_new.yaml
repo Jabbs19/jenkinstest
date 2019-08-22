@@ -1,0 +1,69 @@
+
+application:
+  name: helpline
+replicas:
+  apiCount: 1
+  sidekiqCount: 1
+  redisCount: 1
+  postgresCount: 1
+config:
+  railsServeFiles: "yes"
+  startupArgs: "sleep 60"
+
+
+
+
+  imagename:
+  imageTag:
+
+
+    
+images:
+  registry: docker-default...
+  apiRepository: helpline-tst/my-rails-app
+  apiTag: v1.0
+  sidekiqRepository: helpline-tst/sidekiq
+  sidekiqTag: 2.0
+  redisRepository: helpline-tst/redis
+  redisTag: 4.1
+  postgresRepository: helpline-tst/postgres
+  postgresTag: 9.6
+startup:
+  apiCommand: ""
+  apiArgs: "rake assets:precompile && rails s -p 3000 -b 0.0.0.0"
+  sidekiqCommand: ""
+  sidekiqArgs: "sidekiq start"
+  redisCommand: ""
+  redisArgs: ["something redis"]
+  postgresCommand: ""
+  postgresArgs: ["initdb"]
+services:
+  apiServiceName: api
+  apiPort: 3000
+  redisServiceName: redis
+  redisPort: 6379
+  postgresServiceName: postgresql
+  postgresPort: 5432
+route:
+  name: api
+  hostname: helpline-tst.apps.aheadaviation.local
+  tls: yes
+  tlsType: edge
+  redirect: None
+  serviceExpose: api
+resources:
+  limits:
+    cpu: 100m
+    memory: 128Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+rbac:
+    enabled: true
+#Other areas to consider:
+  #configmaps: we could replace the config map with just configuration values here.
+  #Volumes.  May only need the PVC in here, others are unlikely to change?
+  #Resource: Again, may not need individual values for all
+
+
+

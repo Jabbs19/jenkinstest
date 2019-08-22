@@ -1,0 +1,86 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: helpline
+    tier: api
+  name: api
+spec:
+  replicas: {{ .Values.replicas.apiCount }}
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: helpline
+      tier: api
+  template:
+    metadata:
+      labels:
+        app: helpline
+        tier: api
+    spec:
+      containers:
+      - name:  api 
+        image: docker-registry.default.svc:5000/mark-test/helpline:{{ .Values.images.apiTag }}
+        imagePullPolicy: Always
+        command: ["bin/sh"]
+        args: ["sleep 60s"]
+        env:
+        - name: RAILS_SERVE_STATIC_FILES
+          value: {{ .Values.config.railsServeFiles | quote}}
+        - name: DATABASE_SERVICE_NAME
+          value: postgresql
+        - name: POSTGRES_USER
+          value: postgres
+#        - name: RAILS_MASTER_KEY
+#          valueFrom:
+#            secretKeyRef:
+#              key: RAILS_MASTER_KEY
+#              name: bt-helpline-secret-rails
+#        - name: RAILS_ENV
+#          value: staging
+#        livenessProbe:
+#          failureThreshold: 3
+#          httpGet:
+#            path: /articles
+#            port: 8080
+#            scheme: HTTP
+#          initialDelaySeconds: 10
+#          periodSeconds: 10
+#          successThreshold: 1
+#          timeoutSeconds: 3
+        ports:
+        - containerPort: 3000
+          protocol: TCP
+#        readinessProbe:
+#          failureThreshold: 3
+#          httpGet:
+#            path: /articles
+#            port: 8080
+#            scheme: HTTP
+#          initialDelaySeconds: 5
+#          periodSeconds: 10
+#          successThreshold: 1
+#          timeoutSeconds: 3
+        resources:
+            limits:
+              cpu: '1'
+              memory: 1000Mi
+            requests:
+              cpu: 100m
+              memory: 100Mi
+        volumeMounts:
+        - mountPath: /usr/src/app/tmp
+          name: tmp-volume
+        - mountPath: /usr/src/app/log
+          name: log-volume
+        - mountPath: /usr/src/app/public/assets
+          name: public-assets-volume
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - name: tmp-volume
+        emptyDir: {}
+      - name: log-volume
+        emptyDir: {}
+      - name: public-assets-volume
+        emptyDir: {}
+

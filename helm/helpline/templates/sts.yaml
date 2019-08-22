@@ -1,0 +1,197 @@
+---
+#See if we can use OS api names, otherwise apiVersion: apps/v1beta2
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  labels:
+    app: helpline
+  name: postgresql
+spec:
+  serviceName: postgresql
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: helpline
+      tier: database
+  template:
+    metadata:
+      labels:
+        app: helpline
+        tier: database
+    spec:
+      containers:
+      - name: postgresql      
+        image: docker-registry.default.svc:5000/helm2/postgresql:latest
+        #image: docker-registry.default.svc:5000/openshift/postgresql:latest
+        #image: docker-registry-default.apps.aheadaviation.local/openshift/postgresql:latest
+        #image: registry.redhat.io/rhscl/postgresql-95-rhel7
+        env:
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              key: database-user
+              name: bt-helpline-secret
+        #- name: POSTGRES_PASSWORD
+         # valueFrom:
+          #  secretKeyRef:
+           #   key: database-password
+            #  name: bt-helpline-secret
+        - name: POSTGRES_DATABASE
+          value: psd-call-helpline_staging
+#        - name: PGDATA
+#          value: "/var/lib/postgresql/data/mj"
+        - name: POSTGRES_MAX_CONNECTIONS
+          value: "100"
+        - name: POSTGRES_HOST
+          values: postgresql
+        - name: ALLOW_EMPTY_PASSWORD
+          value: "yes"
+#        - name: POSTGRESQL_SHARED_BUFFERS
+#          value: 12MB
+#        livenessProbe:
+#          exec:
+#            command:
+#            - /usr/libexec/check-container
+#            - --live
+#          failureThreshold: 3
+#          initialDelaySeconds: 120
+#          periodSeconds: 10
+#          successThreshold: 1
+#          timeoutSeconds: 10
+        ports:
+        - containerPort: 5432
+          protocol: TCP
+#        readinessProbe:
+#          exec:
+#            command:
+#            - /usr/libexec/check-container
+#          failureThreshold: 3
+#          initialDelaySeconds: 5
+#          periodSeconds: 10
+#          successThreshold: 1
+#          timeoutSeconds: 1
+        resources:
+            limits:
+              cpu: '1'
+              memory: 1000Mi
+            requests:
+              cpu: 100m
+              memory: 100Mi
+        volumeMounts:
+        - mountPath: /bitnami/postgresql
+          name: postgresql-data
+#Security Context (SCC), may have issue with Postgres and Redis running as Root      
+      securityContext: {}
+      
+#Termination graceperiod gives time for DB shutdown procedures, etc.      
+      terminationGracePeriodSeconds: 30
+#      volumes:
+#      - name: postgresql-data
+#        persistentVolumeClaim:
+#          claimName: postgresql-data
+  volumeClaimTemplates:
+  - metadata:
+      name: postgresql-data
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 5Gi
+      storageClassName: vsphere-standard
+      #volumeName: postgresql-data
+
+---
+
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  labels:
+    app: helpline
+  name: redis
+spec:
+  serviceName: redis
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: helpline
+      tier: redis
+  template:
+    metadata:
+      labels:
+        app: helpline
+        tier: redis
+    spec:
+      containers:
+      - name: redis    
+        image: docker-registry.default.svc:5000/helm2/redis:latest
+        imagePullPolicy: Always
+        #command: ["redis-server"]
+        #args: ["--appendonly yes"]
+        env:
+        #- name: REDIS_PASSWORD
+         # valueFrom:
+          #  secretKeyRef:
+           #   key: database-password
+            #  name: bt-helpline-secret-redis
+        - name: REDIS_EXTRA_FLAGS
+          value: "--appendonly yes"
+        - name: ALLOW_EMPTY_PASSWORD
+          value: "yes"      
+        #- name: PASSWORD
+         #   valueFrom:
+          #  secretKeyRef:
+           #   key: password
+            #  name: bt-helpline-secret-redis
+        #- name: URI
+         # value: redis.test1.svc.cluster.local
+        - name: HOSTNAME
+          value: redis
+        #  valueFrom:
+         #   secretKeyRef:
+          #    key: uri
+           #   name: bt-helpline-secret-redis        
+          ports:
+            - containerPort: 6379
+              protocol: TCP
+          # livenessProbe:
+            # failureThreshold: 3
+            # initialDelaySeconds: 30
+            # periodSeconds: 10
+            # successThreshold: 1
+            # tcpSocket:
+              # port: 6379
+            # timeoutSeconds: 1
+           #readinessProbe:
+            # exec:
+             #  command:
+              #   - /bin/sh
+               #  - '-i'
+                # - '-c'
+                 #- >-
+                  # test "$(redis-cli -h 127.0.0.1 -a $REDIS_PASSWORD ping)" ==
+                   #"PONG"
+          resources:
+            limits:
+              memory: 512Mi
+          #securityContext:
+           # capabilities: {}
+            #privileged: false
+        volumeMounts:
+          - mountPath: /bitnami
+            name: redis-data
+#      securityContext: {}
+#Termination graceperiod gives time for DB shutdown procedures, etc.      
+      terminationGracePeriodSeconds: 30
+  volumeClaimTemplates:
+  - metadata:
+      name: redis-data
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 2Gi
+      storageClassName: vsphere-standard

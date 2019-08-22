@@ -1,0 +1,16 @@
+image:
+  tag: v0.8.0
+env:
+  open:
+    DISABLE_API: false
+resources:
+  limits:
+    cpu: 100m
+    memory: 128Mi
+  requests:
+    cpu: 80m
+    memory: 64Mi
+persistence:
+  enabled: true
+securityContext: 
+  {}

@@ -1,0 +1,21 @@
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: api
+  annotations:
+    description: Exposes the api services externally
+  labels:
+    app: helpline
+spec:
+  host: jenkinstest.apps.aheadaviation.local
+#Path: Path that the router watches to route traffic to the service.      
+#  path: /api/v1/users
+  port:
+    targetPort: web
+#  tls:
+#    termination: edge
+  to:
+    kind: Service
+    name: api
+    weight: 100
+  wildcardPolicy: None
