@@ -1,6 +1,9 @@
-FROM ruby:2.5.5
-ENV MARK_ENV="07-30-2019-t1"
-ENV MARK_OTHER_ENV="my test words"
-ENV BRANCH_NAME = "feature"
-ENV BRANCH_NAME2 = "develop"
-ENV BRANCH_NAME3 = "master"
+FROM ruby:2.5.5-stretch
+LABEL maintainer=someone@mark.org
+
+RUN apt-get update && apt-get install curl
+
+ENV MARK_ENV="07-30-2019-t2"
+ENV MARK_OTHER_ENV="11"
+ENV MARK_OTHER_ENV2="222"
+ENV MARK_OTHER_ENV3="777"
