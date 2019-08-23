@@ -36,11 +36,33 @@ podTemplate(
             }
         }
 
+        stage('Unit Test') {
+            container('ruby') {
+                echo 'Branch and Tag to Follow:'
+                echo env.BRANCH_NAME
+                echo GIT_TAG2
+                if (env.BRANCH_NAME == 'master') {
+                    echo 'Execute Unit Tests on Master'
+                } else if (env.BRANCH_NAME == 'develop'){
+                    echo 'Execute Unit Tests on Develop'
+                    sh 'ruby -v'
+
+                } else if (env.BRANCH_NAME == ''){
+                    echo 'Execute Unit on Tag?'
+
+                    sh 'ruby -v'
+
+                } else {
+                    echo 'I execute elsewhere'
+                }
+                
+            }
+        }
 		container('ruby') {
             stage('Dependencies') {
                 //Ruby pre-requisites for unit tests.
 				//Anything needed?
-				sh 'ruby -v'
+				
 				sh 'echo $mj-test-desc'
 				sh 'echo $MJ-TEST-DESC'
 				sh 'echo ${mj-test-desc}'
