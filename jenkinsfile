@@ -89,6 +89,9 @@ podTemplate(
             }
         }
         stage('Just master') {
+            when {
+            branch "master"
+            }
           sh """
             pwd
             env
