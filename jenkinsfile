@@ -89,17 +89,16 @@ podTemplate(
             }
         }
         
-        stage('Just master') {
-            when {
-                expression {env.GIT_BRANCH == 'origin/master'}
+        stage('Just Master') {
+            steps {
+                script { 
+                    if (env.BRANCH_NAME != 'master' && env.BRANCH_NAME != 'staging') {
+                        echo 'This is not master or staging'
+                    } else {
+                        echo 'things and stuff'
+                    }
+                }
             }
-            
-          sh """
-            pwd
-            env
-            find ${HOME}
-            df -h
-            """
         }
         stage('Checkout') {
             container('jnlp') {
