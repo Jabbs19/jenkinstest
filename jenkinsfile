@@ -1,6 +1,6 @@
 def label = "jenkins-slave-${UUID.randomUUID().toString()}"
-def TAIL_TAG = ""
-def HEAD_TAG = ""
+//def TAIL_TAG = ""
+//def HEAD_TAG = ""
 
 podTemplate(
     label: label,
@@ -28,74 +28,77 @@ podTemplate(
         stage('Checkout') {
             container('jnlp') {
                 checkout scm
-                TAIL_TAG = sh(returnStdout: true, script: "git tag --sort version:refname | tail -1").trim()
+                def TAIL_TAG = sh(returnStdout: true, script: "git tag --sort version:refname | tail -1").trim()
                 echo 'Tail Tag:'
                 echo TAIL_TAG
-                HEAD_TAG = sh(returnStdout: true, script: " git tag -l --contains HEAD").trim()
+                def HEAD_TAG = sh(returnStdout: true, script: "git tag -l --contains HEAD").trim()
                 echo 'Head Tag:'
                 echo HEAD_TAG
+                def MASTER_TAG = sh(returnStdout: true, script: "git tag -l --points-at master").trim()
+                echo 'Master Tag:'
+                echo MASTER_TAG
 
 
             }
         }
 
-        stage('Unit Test') {
-            container('ruby') {
-                echo 'Branch:'
-                echo env.BRANCH_NAME
-                echo 'Tag:'
-                echo TAIL_TAG
-                echo 'Start Branch Decision'
-                if (env.BRANCH_NAME == 'master') {
-                    echo 'Execute Unit Tests on Master'
-                } else if (env.BRANCH_NAME == 'develop'){
-                    echo 'Execute Unit Tests on Develop'
-                    sh 'ruby -v'
-
-                } else if (env.BRANCH_NAME == ''){
-                    echo 'Execute Unit on Tag?'
-                    sh 'ruby -v'
-
-                } else {
-                    echo 'I execute elsewhere'
-                }
+        // stage('Unit Test') {
+        //     container('ruby') {
+        //         echo 'Branch:'
+        //         echo env.BRANCH_NAME
+        //         echo 'Tag:'
                 
-            }
-        }
+        //         echo 'Start Branch Decision'
+        //         if (env.BRANCH_NAME == 'master') {
+        //             echo 'Execute Unit Tests on Master'
+        //         } else if (env.BRANCH_NAME == 'develop'){
+        //             echo 'Execute Unit Tests on Develop'
+        //             sh 'ruby -v'
+
+        //         } else if (env.BRANCH_NAME == ''){
+        //             echo 'Execute Unit on Tag?'
+        //             sh 'ruby -v'
+
+        //         } else {
+        //             echo 'I execute elsewhere'
+        //         }
+                
+        //     }
+        // }
 		
-        stage('OC Build Image') {
-            container('openshift') {
-                sh 'oc whoami'
-            }
-        }
+        // stage('OC Build Image') {
+        //     container('openshift') {
+        //         sh 'oc whoami'
+        //     }
+        // }
 		
-        stage('package charts') {
-            container('helm') {
-                sh 'helm help'
-            }
-        }
+        // stage('package charts') {
+        //     container('helm') {
+        //         sh 'helm help'
+        //     }
+        // }
     	
-        stage('Deploy') {
-            echo env.GIT_TAG_NAME
-            if (env.BRANCH_NAME == 'master') {
-                echo 'I only execute on the master branch'
+        // stage('Deploy') {
+        //     echo env.GIT_TAG_NAME
+        //     if (env.BRANCH_NAME == 'master') {
+        //         echo 'I only execute on the master branch'
                 
                 
 
-            } else if (env.BRANCH_NAME == 'develop'){
-                echo 'I only execute on the develop branch'
-                echo env.GIT_TAG_NAME
-            }
+        //     } else if (env.BRANCH_NAME == 'develop'){
+        //         echo 'I only execute on the develop branch'
+        //         echo env.GIT_TAG_NAME
+        //     }
 
-            else {
-                echo 'I execute elsewhere'
-            }
-        }
-        stage('Checkout') {
-            container('jnlp') {
-                checkout scm
-            }
-        }
+        //     else {
+        //         echo 'I execute elsewhere'
+        //     }
+        // }
+        // stage('Checkout') {
+        //     container('jnlp') {
+        //         checkout scm
+        //     }
+        // }
         
         
     }
