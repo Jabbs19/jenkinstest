@@ -44,7 +44,7 @@ podTemplate(
                 echo 'Branch:'
                 echo env.BRANCH_NAME
                 echo 'Tag:'
-                echo GIT_TAG2
+                echo TAIL_TAG
                 echo 'Start Branch Decision'
                 if (env.BRANCH_NAME == 'master') {
                     echo 'Execute Unit Tests on Master'
