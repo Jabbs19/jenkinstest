@@ -26,7 +26,9 @@ podTemplate(
         stage('Checkout') {
             container('jnlp') {
                 checkout scm
-                GIT_TAG = env.GIT_TAG_NAME
+                def GIT_TAG = env.GIT_TAG_NAME
+                env.GIT_TAG_NAME
+                echo ${GIT_TAG})
             }
         }
 
@@ -92,7 +94,6 @@ podTemplate(
         
         stage('Deploy') {
             echo env.GIT_TAG_NAME
-            echo ${GIT_TAG}
             if (env.BRANCH_NAME == 'master') {
                 echo 'I only execute on the master branch'
                 
