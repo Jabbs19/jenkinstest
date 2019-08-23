@@ -97,6 +97,7 @@ podTemplate(
 
             } else if (env.BRANCH_NAME == 'develop'){
                 echo 'I only execute on the develop branch'
+                echo env.GIT_TAG_NAME
             }
 
             else {
