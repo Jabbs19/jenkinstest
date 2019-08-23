@@ -27,6 +27,7 @@ podTemplate(
             container('jnlp') {
                 checkout scm
                 def GIT_TAG2 = sh(returnStdout: true, script: "git tag --sort version:refname | tail -1").trim()
+                echo 'Tail Tag:'
                 echo GIT_TAG2
 
             }
@@ -34,8 +35,9 @@ podTemplate(
 
         stage('Unit Test') {
             container('ruby') {
-                echo 'Branch and Tag to Follow:'
+                echo 'Branch:'
                 echo env.BRANCH_NAME
+                echo 'Tag:'
                 echo GIT_TAG2
                 if (env.BRANCH_NAME == 'master') {
                     echo 'Execute Unit Tests on Master'
