@@ -1,4 +1,5 @@
 def label = "jenkins-slave-${UUID.randomUUID().toString()}"
+def GIT_TAG2 = ""
 
 podTemplate(
     label: label,
@@ -26,7 +27,7 @@ podTemplate(
         stage('Checkout') {
             container('jnlp') {
                 checkout scm
-                def GIT_TAG2 = sh(returnStdout: true, script: "git tag --sort version:refname | tail -1").trim()
+                GIT_TAG2 = sh(returnStdout: true, script: "git tag --sort version:refname | tail -1").trim()
                 echo 'Tail Tag:'
                 echo GIT_TAG2
 
@@ -39,6 +40,7 @@ podTemplate(
                 echo env.BRANCH_NAME
                 echo 'Tag:'
                 echo GIT_TAG2
+                echo 'Start Branch Decision'
                 if (env.BRANCH_NAME == 'master') {
                     echo 'Execute Unit Tests on Master'
                 } else if (env.BRANCH_NAME == 'develop'){
