@@ -89,15 +89,11 @@ podTemplate(
             }
         }
         
-        stage('Just Master') {
-            steps {
-                script { 
-                    if (env.BRANCH_NAME != 'master' && env.BRANCH_NAME != 'staging') {
-                        echo 'This is not master or staging'
-                    } else {
-                        echo 'things and stuff'
-                    }
-                }
+        stage('Example') {
+            if (env.BRANCH_NAME == 'master') {
+                echo 'I only execute on the master branch'
+            } else {
+                echo 'I execute elsewhere'
             }
         }
         stage('Checkout') {
