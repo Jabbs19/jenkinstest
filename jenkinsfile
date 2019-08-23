@@ -58,66 +58,19 @@ podTemplate(
                 
             }
         }
-		container('ruby') {
-            stage('Dependencies') {
-                //Ruby pre-requisites for unit tests.
-				//Anything needed?
-				
-				sh 'echo $mj-test-desc'
-				sh 'echo $MJ-TEST-DESC'
-				sh 'echo ${mj-test-desc}'
-				sh 'echo ${MJ-TEST-DESC}'
-
-				
-				
-				}
-            
-            stage('Run Tests') {
-			//rake/rspec?
-			//	sh 'say = "I love Ruby"'
-            //  sh 'puts say'
-			}
-			stage('Store Artifact'){
-			// script{
-			//Are we going to still store in Artifacts?
-			//We can just run a bunch of shell commands in this "script{} block"
-			 
-			}
-        }
-
-		container('docker') {
-            stage('Docker Build Image') {
-				//May need to mount daemon.sock?
-                //sh 'docker info'
-                
+		
+        stage('OC Build Image') {
+            container('openshift') {
+                sh 'oc whoami'
             }
         }
 		
-		container('openshift') {
-            stage('OC Build Image') {
-                sh 'oc whoami'
-				//sh "oc start-build ${APP_NAME} --from-dir=./_site/ --wait --follow"
-			}
-			stage('OC Deploy to Stage') {
-                sh 'oc login -u cluster-admin -p password https://lb.aheadaviation.local:8443 --insecure-skip-tls-verify'
-                sh 'oc project shared-services'
-                sh 'oc get pods'
-                //sh 'oc project helm2'
-                //sh 'oc start-build "mj-buildconfig" --from-dir="."'
-                }
-		}
-    	
-		container('helm') {
-            stage('package charts') {
+        stage('package charts') {
+            container('helm') {
                 sh 'helm help'
             }
         }
-        container('ruby') {
-            stage('More tests') {
-                sh 'ruby -v'
-            }
-        }
-        
+    	
         stage('Deploy') {
             echo env.GIT_TAG_NAME
             if (env.BRANCH_NAME == 'master') {
