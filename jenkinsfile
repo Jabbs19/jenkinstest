@@ -88,10 +88,12 @@ podTemplate(
                 sh 'ruby -v'
             }
         }
+        
         stage('Just master') {
             when {
-            branch "master"
+                expression {env.GIT_BRANCH == 'origin/master'}
             }
+            
           sh """
             pwd
             env
