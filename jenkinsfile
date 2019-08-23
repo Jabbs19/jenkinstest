@@ -92,7 +92,7 @@ podTemplate(
         stage('Deploy') {
             if (env.BRANCH_NAME == 'master') {
                 echo 'I only execute on the master branch'
-            } elsif (env.BRANCH_NAME == 'develope'){
+            } else if (env.BRANCH_NAME == 'develope'){
                 echo 'I only execute on the develop branch'
             }
 
