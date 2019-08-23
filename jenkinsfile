@@ -1,7 +1,6 @@
 def label = "jenkins-slave-${UUID.randomUUID().toString()}"
 def TAIL_TAG = ""
 def HEAD_TAG = ""
-def TAIL_TAG = ""
 
 podTemplate(
     label: label,
