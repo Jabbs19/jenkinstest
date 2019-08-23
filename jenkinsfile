@@ -92,6 +92,9 @@ podTemplate(
         stage('Deploy') {
             if (env.BRANCH_NAME == 'master') {
                 echo 'I only execute on the master branch'
+                echo env.GIT_TAG_NAME
+                echo $GIT_TAG_NAME
+
             } else if (env.BRANCH_NAME == 'develop'){
                 echo 'I only execute on the develop branch'
             }
