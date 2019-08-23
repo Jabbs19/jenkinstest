@@ -1,5 +1,7 @@
 def label = "jenkins-slave-${UUID.randomUUID().toString()}"
-def GIT_TAG2 = ""
+def TAIL_TAG = ""
+def HEAD_TAG = ""
+def TAIL_TAG = ""
 
 podTemplate(
     label: label,
@@ -27,9 +29,13 @@ podTemplate(
         stage('Checkout') {
             container('jnlp') {
                 checkout scm
-                GIT_TAG2 = sh(returnStdout: true, script: "git tag --sort version:refname | tail -1").trim()
+                TAIL_TAG = sh(returnStdout: true, script: "git tag --sort version:refname | tail -1").trim()
                 echo 'Tail Tag:'
-                echo GIT_TAG2
+                echo TAIL_TAG
+                HEAD_TAG = sh(returnStdout: true, script: " git tag -l --contains HEAD").trim()
+                echo 'Head Tag:'
+                echo HEAD_TAG
+
 
             }
         }
