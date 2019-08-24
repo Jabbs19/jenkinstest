@@ -34,6 +34,28 @@ podTemplate(
                 def COMMIT_HEAD_TAG = sh(returnStdout: true, script: "git tag -l --points-at HEAD | tail -1").trim()
                 echo 'Head Tag:'
                 echo COMMIT_HEAD_TAG
+                if (env.BRANCH_NAME == 'master') {
+                    echo 'Executing on Master'
+                } else if (env.BRANCH_NAME == 'develop'){
+                    echo 'Execute Unit Tests on Develop'
+                    sh 'ruby -v'
+
+                } else if (env.BRANCH_NAME == 'release'){
+                    echo 'Execute Unit on Tag?'
+                    sh 'ruby -v'
+
+                } else if (env.BRANCH_NAME.contains('prod') && COMMIT_HEAD_TAG.contains('prod')){
+                    echo 'Specific Tags?'
+                    sh 'ruby -v'
+
+                }
+                else {
+                    echo 'Head Tag:'    
+                    echo COMMIT_HEAD_TAG
+                    echo 'Env:'
+                    echo env.BRANCH_NAME
+                    echo 'This is the fallback of this IF'
+                }
                 // try {
                 // def MASTER_TAG = sh(returnStdout: true, script: "git tag -l --points-at=master").trim()
                 // echo 'Master Tag:'
