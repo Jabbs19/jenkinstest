@@ -397,7 +397,7 @@ podTemplate(
                         
                         echo 'Deploy Production with helm to ' + OS_DEPLOY_PROJECT + ' with tag:' + DEPLOY_IMAGE_NAME
                         sh 'helm --help'
-                    } else if ((env.BRANCH_NAME.contains(HOTFIX_TAG_FILTER) && COMMIT_HEAD_TAG.contains(HOTFIX_TAG_FILTER)) {
+                    } else if (env.BRANCH_NAME.contains(HOTFIX_TAG_FILTER) && COMMIT_HEAD_TAG.contains(HOTFIX_TAG_FILTER)) {
                         //Currently the same as Master Release, but if we want to do something different with hotfixes, we can do it here.
                         //Set Full path of TGZ
                         //def TGZ_PATH = TGZ_DEST_DIR + '/' + PACKAGE_NAME 
