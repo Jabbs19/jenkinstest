@@ -40,6 +40,7 @@ def DEPLOY_IMAGE_NAME = ""
 def COMMIT_HEAD_TAG = ""
 def RELEASE_NAME_FINAL = ""
 def VALUES_YAML_FINAL = ""
+def APP_VERSION = ""
 
 podTemplate(
     label: label,
@@ -57,23 +58,24 @@ podTemplate(
 ) {
     node(label) {
         stage('Init') {
+         /* Init Stuff         
           sh """
             pwd
             env
             find ${HOME}
             df -h
             """
+        */
         }
-        stage('Checkout') {
-            container('jnlp') {
+        container('jnlp') {
+            stage('SCM Checkout') {
                 checkout scm
                 COMMIT_HEAD_TAG = sh(returnStdout: true, script: "git tag -l --points-at HEAD | tail -1").trim()
-                echo 'Head Tag:' + COMMIT_HEAD_TAG
-                if (COMMIT_HEAD_TAG == "") {
-                    error "No Git Version at Master Head"
-                }
-                echo 'Branch Name:' + env.BRANCH_NAME
-                echo 'Check Branch:'
+                echo 'Commit Head Tag:' + COMMIT_HEAD_TAG
+                echo 'Current Branch Name:' + env.BRANCH_NAME
+            }
+            stage('Set Branch Variables') {
+                echo 'Set Branch Variables Branch:'
                 if (env.BRANCH_NAME == 'master') {
                     echo 'Executing on Master'
                     OS_PROJECT_FINAL = OS_PRD_PROJECT
@@ -81,6 +83,18 @@ podTemplate(
                     DEPLOY_IMAGE_TAG = COMMIT_HEAD_TAG
                     DEPLOY_IMAGE_NAME = OS_PROJECT_FINAL + '/' + IMAGE_NAME + ':' + COMMIT_HEAD_TAG
                     VALUES_YAML_FINAL = PRD_HELM_VALUES_LOC
+                    //Tags for Master Release Checks.  Could add more filters, sig checks, etc.
+                    if (COMMIT_HEAD_TAG == "") {
+                    error "No Git Version at Master Head"
+                    } else {
+                        println(COMMIT_HEAD_TAG)                
+                        if (COMMIT_HEAD_TAG.substring(0,TAG_FILTER.length()) = TAG_FILTER) {
+                            APP_VERSION = COMMIT_HEAD_TAG.substring(TAG_FILTER.length(),COMMIT_HEAD_TAG.length())
+                        } else {
+                            APP_VERSION = COMMIT_HEAD_TAG
+                        }
+                    }
+                    echo 'App Version: ' + APP_VERSION
                 } else if (env.BRANCH_NAME == 'develop'){
                     echo 'Execute on Develop'
                     OS_PROJECT_FINAL = OS_DEV_PROJECT
@@ -174,9 +188,9 @@ podTemplate(
             }
         }
         container('openshift') {
-            stage('Secrets') {
+            stage('Create Secrets') {
                 echo 'Probably need to build secrets in all environments.'
-
+                echo '1. Delete All Secrets. 2. Create Image build secrets. 3. Create Application Secrets.'
             /* Real Code Below:
             //Could parameterize secrets to Project Name
 
@@ -243,6 +257,10 @@ podTemplate(
                     echo 'Head Tag:' + COMMIT_HEAD_TAG
                     echo 'Branch Name:' + env.BRANCH_NAME
                 }
+            }
+            stage ('Secrets Cleanup') {
+                echo 'Delete any secrets that are not needed (maybe build secrets?)'
+
             }
         }
         stage('Deploy Application') {
