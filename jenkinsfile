@@ -335,7 +335,7 @@ podTemplate(
                     echo 'Run Helm Lint Test'
                     //sh 'helm lint ${CHART_LOCATION}'
                 }
-                if (env.BRANCH_NAME == 'master' || (env.BRANCH_NAME.contains(HOTFIX_TAG_FILTER) && COMMIT_HEAD_TAG.contains(HOTFIX_TAG_FILTER)){
+                if (env.BRANCH_NAME == 'master' || (env.BRANCH_NAME.contains(HOTFIX_TAG_FILTER) && COMMIT_HEAD_TAG.contains(HOTFIX_TAG_FILTER))){
                     stage('Get Chartname') {
                         // Read from Chart values.  Get chartVersion
                         //def chartYaml = readYaml file: 'helm/helpline/Chart.yaml'
