@@ -2,6 +2,7 @@ def label = "jenkins-slave-${UUID.randomUUID().toString()}"
 def COMMIT_HEAD_TAG = ""
 def DEVELOP_IMAGE_TAG = "test"
 def RELEASE_IMAGE_TAG = "release"
+def TAG_FILTER="prod"
 
 podTemplate(
     label: label,
@@ -39,7 +40,7 @@ podTemplate(
                     echo 'Execute on Develop'
                 } else if (env.BRANCH_NAME == 'release'){
                     echo 'Execute on Release'
-                } else if (env.BRANCH_NAME.contains('prod') && COMMIT_HEAD_TAG.contains('prod')){
+                } else if (env.BRANCH_NAME.contains(TAG_FILTER) && COMMIT_HEAD_TAG.contains('prod')){
                     echo 'Execute on "prod" specific tag.'
                 }
                 else {
