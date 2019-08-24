@@ -214,7 +214,7 @@ podTemplate(
                 }
             }
         }
-        stage('Deploy Image') {
+        stage('Deploy Application') {
             container('helm') {
                 stage('Initialize Helm') {
                     echo 'Build, Package and Push Chart to ChartMuseum'
@@ -338,10 +338,8 @@ podTemplate(
                         echo 'Head Tag:' + COMMIT_HEAD_TAG
                         echo 'Branch Name:' + env.BRANCH_NAME
                     }
-
-                //Deploy
+                }
             }
         }
-        
     }
 }
