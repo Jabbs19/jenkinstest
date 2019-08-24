@@ -45,20 +45,72 @@ podTemplate(
                     echo 'Head Tag:' + COMMIT_HEAD_TAG
                     echo 'Branch Name:' + env.BRANCH_NAME
                 }
-                // try {
-                // def MASTER_TAG = sh(returnStdout: true, script: "git tag -l --points-at=master").trim()
-                // echo 'Master Tag:'
-                // echo MASTER_TAG
-                // } catch (e) {
-                // }
-                // finally {
-                // }
-
-               
-
-
             }
         }
+        stage('Unit Test') {
+            container('ruby') {
+                if (env.BRANCH_NAME == 'master') {
+                    echo 'No Unit Test'
+                } else if (env.BRANCH_NAME == 'develop'){
+                    echo 'No Unit Test'
+                } else if (env.BRANCH_NAME == 'release'){
+                    echo 'Execute Unit Tests'
+                    sh 'ruby -v'
+                } else if (env.BRANCH_NAME.contains('prod') && COMMIT_HEAD_TAG.contains('prod')){
+                    echo 'No Unit Test'
+                }
+                else {
+                    echo 'No Unit Test'
+                    echo 'Head Tag:' + COMMIT_HEAD_TAG
+                    echo 'Branch Name:' + env.BRANCH_NAME
+                }
+            }
+        }
+        stage('Checkmarx') {
+            container('jnlp') {
+                if (env.BRANCH_NAME == 'master') {
+                    echo 'No Checkmarx'
+                } else if (env.BRANCH_NAME == 'develop'){
+                    echo 'No Checkmarx'
+                } else if (env.BRANCH_NAME == 'release'){
+                    echo 'Execute Checkmarx'
+                } else if (env.BRANCH_NAME.contains('prod') && COMMIT_HEAD_TAG.contains('prod')){
+                    echo 'No Checkmarx'
+                }
+                else {
+                    echo 'No Checkmarx'
+                    echo 'Head Tag:' + COMMIT_HEAD_TAG
+                    echo 'Branch Name:' + env.BRANCH_NAME
+                }
+            }
+        }
+        stage('Secrets') {
+            container('openshift') {
+                echo 'Probably need to build secrets in all environments.'
+            }
+        }
+
+        stage('Build Image') {
+            container('openshift') {
+                if (env.BRANCH_NAME == 'master') {
+                    echo 'No Build'
+                } else if (env.BRANCH_NAME == 'develop'){
+                    echo 'Build on Develop'
+                    sh 'oc whoami'
+                } else if (env.BRANCH_NAME == 'release'){
+                    echo 'Build on Release'
+                    sh 'oc whoami'
+                } else if (env.BRANCH_NAME.contains('prod') && COMMIT_HEAD_TAG.contains('prod')){
+                    echo 'No Build'
+                }
+                else {
+                    echo 'No Build. Should we name feature, or leave open?'
+                    echo 'Head Tag:' + COMMIT_HEAD_TAG
+                    echo 'Branch Name:' + env.BRANCH_NAME
+                }
+            }
+        }
+
 
         // stage('Unit Test') {
         //     container('ruby') {
