@@ -45,9 +45,8 @@ podTemplate(
                     sh 'ruby -v'
 
                 } else if (env.BRANCH_NAME.contains('prod') && COMMIT_HEAD_TAG.contains('prod')){
-                    echo 'Specific Tags?'
-                    sh 'ruby -v'
-
+                    echo 'This is the "prod" specific tag release.'
+                    
                 }
                 else {
                     echo 'Head Tag:'    
