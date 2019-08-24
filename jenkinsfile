@@ -2,18 +2,23 @@ def label = "jenkins-slave-${UUID.randomUUID().toString()}"
 //Production Variables
 def OS_PRD_PROJECT = "psd-helpline-prd"
 def PRD_IMAGE_TAG = "production"
+def PRD_HELM_VALUES_LOC = "helm/helpline/values-prd.yaml"
 
 //Release Variables
 def OS_REL_PROJECT = "psd-helpline-rel"
 def RELEASE_IMAGE_TAG = "release"
+def RELEASE_HELM_VALUES_LOC = "helm/helpline/values-rel.yaml"
 
 //Develop Variables
 def OS_DEV_PROJECT = "psd-helpline-tst"
 def DEVELOP_IMAGE_TAG = "test"
+def DEVELOP_HELM_VALUES_LOC = "helm/helpline/values-tst.yaml"
 
 //Stage Variables
 def OS_STG_PROJECT = "psd-helpline-stg"
 def STAGE_IMAGE_TAG = "feature"
+def STAGE_HELM_VALUES_LOC = "helm/helpline/values.yaml"
+
 
 //Default Variables
 def OS_PROJECT_FINAL = ""
@@ -33,7 +38,9 @@ def IMAGE_NAME = 'helpline'
 def TILLER_NAMESPACE = 'ocp-tiller'
 def CHARTNAME_PREFIX = 'helpline'
 def CHART_LOCATION = 'helm/helpline'
-def CHARTNAME_FINAL = ""
+def TGZ_DEST_DIR = 'helm'
+def RELEASE_NAME_FINAL = ""
+def VALUES_YAML_FINAL = ""
 
 podTemplate(
     label: label,
@@ -68,33 +75,35 @@ podTemplate(
                 if (env.BRANCH_NAME == 'master') {
                     echo 'Executing on Master'
                     OS_PROJECT_FINAL = OS_PRD_PROJECT
-                    CHARTNAME_FINAL = CHARTNAME_PREFIX + '-prd'
+                    RELEASE_NAME_FINAL = CHARTNAME_PREFIX + '-prd'
                     DEPLOY_IMAGE_TAG = COMMIT_HEAD_TAG
                     DEPLOY_IMAGE_NAME = OS_PROJECT_FINAL + '/' + IMAGE_NAME + ':' + COMMIT_HEAD_TAG
+                    VALUES_YAML_FINAL = PRD_HELM_VALUES_LOC
                 } else if (env.BRANCH_NAME == 'develop'){
                     echo 'Execute on Develop'
                     OS_PROJECT_FINAL = OS_DEV_PROJECT
-                    CHARTNAME_FINAL = CHARTNAME_PREFIX + '-dev'
+                    RELEASE_NAME_FINAL = CHARTNAME_PREFIX + '-dev'
                     BUILD_IMAGE_NAME = OS_PROJECT_FINAL + '/' + IMAGE_NAME + ':' + DEVELOP_IMAGE_TAG
                     DEPLOY_IMAGE_TAG = DEVELOP_IMAGE_TAG
                     DEPLOY_IMAGE_NAME = OS_PROJECT_FINAL + '/' + IMAGE_NAME + ':' + DEVELOP_IMAGE_TAG
-
+                    VALUES_YAML_FINAL = DEVELOP_HELM_VALUES_LOC
                 } else if (env.BRANCH_NAME == 'stage'){
                     echo 'Execute on Stage'
                     OS_PROJECT_FINAL = OS_STG_PROJECT
-                    CHARTNAME_FINAL = CHARTNAME_PREFIX + '-stg'
+                    RELEASE_NAME_FINAL = CHARTNAME_PREFIX + '-stg'
                     BUILD_IMAGE_NAME = OS_PROJECT_FINAL + '/' + IMAGE_NAME + ':' + STAGE_IMAGE_TAG
                     DEPLOY_IMAGE_TAG = STAGE_IMAGE_TAG
                     DEPLOY_IMAGE_NAME = OS_PROJECT_FINAL + '/' + IMAGE_NAME + ':' + STAGE_IMAGE_TAG
+                    VALUES_YAML_FINAL = STAGE_HELM_VALUES_LOC
 
                 } else if (env.BRANCH_NAME.contains(TAG_FILTER) && COMMIT_HEAD_TAG.contains(TAG_FILTER)){
                     echo 'Execute on specific "Release" Tag of:' + TAG_FILTER
                     OS_PROJECT_FINAL = OS_REL_PROJECT
-                    CHARTNAME_FINAL = CHARTNAME_PREFIX + '-rel'
+                    RELEASE_NAME_FINAL = CHARTNAME_PREFIX + '-rel'
                     BUILD_IMAGE_NAME = OS_PROJECT_FINAL + '/' + IMAGE_NAME + ':' + RELEASE_IMAGE_TAG
                     DEPLOY_IMAGE_TAG = COMMIT_HEAD_TAG
                     DEPLOY_IMAGE_NAME = OS_PROJECT_FINAL + '/' + IMAGE_NAME + ':' + COMMIT_HEAD_TAG
-
+                    VALUES_YAML_FINAL = RELEASE_HELM_VALUES_LOC
                 }
                 else {
                     echo 'Non Branch or Tag execution.'
@@ -240,12 +249,12 @@ podTemplate(
         stage('Deploy Application') {
             container('helm') {
                 stage('Initialize Helm') {
-                    echo 'Build, Package and Push Chart to ChartMuseum'
+                    echo 'Initialize Helm Client and Check tiller access'
                     //sh 'helm init --client-only'
                     //sh 'helm version --tiller-namespace $TILLER_NAMESPACE'
                     }
                 stage('Lint Tests') {
-                    echo 'Lint Test'
+                    echo 'Run Helm Lint Test'
                     //sh 'helm lint ${CHART_LOCATION}'
                 }
                 if (env.BRANCH_NAME == 'master') {
@@ -263,9 +272,9 @@ podTemplate(
                         //Pacakge Helm
                         //sh "helm package helm/helpline -d helm"
                         //We know the name of the .tgz will be <chartname>-<chartversion>.tgz
-                        //def packageName = "helpline-${chartVersion}.tgz"
+                        //def PACKAGE_NAME = "helpline-${chartVersion}.tgz"
                         //sh """
-                        //echo "Package Name: ${packageName}"
+                        //echo "Package Name: ${PACKAGE_NAME}"
                         //"""
                         echo 'Package helm into .tgz'
                     }
@@ -283,7 +292,7 @@ podTemplate(
                         //Could put these credentials in Jenkins...and probably change them in ChartMuseum
                         //sh """
                         //curl -u admin:admin -k  \
-                        //--data-binary ${packageName} \
+                        //--data-binary ${PACKAGE_NAME} \
                         //http://chartmuseum-chartmuseum.chartmuseum:8080/api/charts
                         //"""
                         echo 'Push to ChartMuseum'                    
@@ -292,30 +301,33 @@ podTemplate(
                 stage ('Deploy with Helm') {
                     //Could make this a "configuration step, and just set all remaining values before a global "deploy"
                     if (env.BRANCH_NAME == 'master') {
-
-                        /* Real Code Below
-                        sh """
-                        helm version --tiller-namespace ocp-tiller \
-                        helm upgrade --install helpline-tst \
-                        helm/${packageName} \
-                        --namespace ${OS_PROJECT_FINAL} \
-                        --tiller-namespace ${TILLER_NAMESPACE} \
-                        -f values-prd.yaml \
-                        --set image.apiTag=${DEPLOY_IMAGE_TAG}
-                        """
-                        */
-                        echo 'Deploy with helm to ' + OS_PROJECT_FINAL + ' with tag:' + DEPLOY_IMAGE_NAME
-                        sh 'helm --help'
-                    } else if (env.BRANCH_NAME == 'develop' || env.BRANCH_NAME == 'feature' || (env.BRANCH_NAME.contains(TAG_FILTER) && COMMIT_HEAD_TAG.contains(TAG_FILTER))){
+                        //Set Full path of TGZ
+                        //def TGZ_PATH = TGZ_DEST_DIR + '/' + PACKAGE_NAME 
                         
                         /* Real Code Below
                         sh """
-                        helm version --tiller-namespace ocp-tiller \
-                        helm upgrade --install helpline-tst \
-                        helm/helpline \
+                        helm version --tiller-namespace ${TILLER_NAMESPACE} \
+                        helm upgrade --install ${RELEASE_NAME_FINAL} \
+                        ${TGZ_PATH} \
                         --namespace ${OS_PROJECT_FINAL} \
                         --tiller-namespace ${TILLER_NAMESPACE} \
-                        -f values-dev.yaml \
+                        -f ${VALUES_YAML_FINAL} \
+                        --set image.apiTag=${DEPLOY_IMAGE_TAG}
+                        """
+                        */
+                        
+                        echo 'Deploy with helm to ' + OS_PROJECT_FINAL + ' with tag:' + DEPLOY_IMAGE_NAME
+                        sh 'helm --help'
+                    } else if (env.BRANCH_NAME == 'develop' || env.BRANCH_NAME == 'feature' || (env.BRANCH_NAME.contains(TAG_FILTER) && COMMIT_HEAD_TAG.contains(TAG_FILTER))){
+                        CHART_LOCATION
+                        /* Real Code Below
+                        sh """
+                        helm version --tiller-namespace ${TILLER_NAMESPACE} \
+                        helm upgrade --install RELEASE_NAME_FINAL \
+                        ${CHART_LOCATION} \
+                        --namespace ${OS_PROJECT_FINAL} \
+                        --tiller-namespace ${TILLER_NAMESPACE} \
+                        -f ${VALUES_YAML_FINAL} \
                         --set image.apiTag=${DEPLOY_IMAGE_TAG}
                         """
                         */
