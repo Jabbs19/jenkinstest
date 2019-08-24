@@ -306,7 +306,7 @@ podTemplate(
                         */
                         echo 'Deploy with helm to ' + OS_PROJECT_FINAL + ' with tag:' + DEPLOY_IMAGE_NAME
                         sh 'helm --help'
-                    } else if (env.BRANCH_NAME == 'develop'){
+                    } else if (env.BRANCH_NAME == 'develop' || env.BRANCH_NAME == 'feature' || (env.BRANCH_NAME.contains(TAG_FILTER) && COMMIT_HEAD_TAG.contains(TAG_FILTER))){
                         
                         /* Real Code Below
                         sh """
@@ -323,40 +323,7 @@ podTemplate(
                         //Deploy with :test
                         echo 'Deploy with helm to ' + OS_PROJECT_FINAL + ' with tag:' + DEPLOY_IMAGE_NAME
                         sh 'helm --help'
-                    } else if (env.BRANCH_NAME == 'feature'){
-                        /* Real Code Below
-                        sh """
-                        helm version --tiller-namespace ocp-tiller \
-                        helm upgrade --install helpline-tst \
-                        helm/helpline \
-                        --namespace ${OS_PROJECT_FINAL} \
-                        --tiller-namespace ${TILLER_NAMESPACE} \
-                        -f values-stg.yaml \
-                        --set image.apiTag=${DEPLOY_IMAGE_TAG}
-                        """
-                        */
-
-                        //Deploy with :test
-                        echo 'Deploy with helm to ' + OS_PROJECT_FINAL + ' with tag:' + DEPLOY_IMAGE_NAME
-                        sh 'helm --help'
-                    } else if (env.BRANCH_NAME.contains(TAG_FILTER) && COMMIT_HEAD_TAG.contains(TAG_FILTER)){
-                        /* Real Code Below
-                        sh """
-                        helm version --tiller-namespace ocp-tiller \
-                        helm upgrade --install helpline-tst \
-                        helm/helpline \
-                        --namespace ${OS_PROJECT_FINAL} \
-                        --tiller-namespace ${TILLER_NAMESPACE} \
-                        -f values-rel.yaml \
-                        --set image.apiTag=${DEPLOY_IMAGE_TAG}
-                        """
-                        */
-
-                        //Deploy with :test
-                        echo 'Deploy with helm to ' + OS_PROJECT_FINAL + ' with tag:' + DEPLOY_IMAGE_NAME
-                        sh 'helm --help'
-                        
-                    } else {
+                    }  else {
                         echo 'No Deploy.'
                         echo 'Head Tag:' + COMMIT_HEAD_TAG
                         echo 'Branch Name:' + env.BRANCH_NAME
