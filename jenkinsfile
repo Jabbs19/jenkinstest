@@ -15,6 +15,7 @@ def TAG_FILTER="prod"
 //Helm and Tiller Stuff
 def TILLER_NAMESPACE = 'ocp-tiller'
 def CHARTNAME_PREFIX = 'helpline'
+def CHART_LOCATION = 'helm/helpline'
 def CHARTNAME_FINAL = ""
 
 podTemplate(
@@ -215,55 +216,128 @@ podTemplate(
         }
         stage('Deploy Image') {
             container('helm') {
-                if (env.BRANCH_NAME == 'master') {
-                    stage('Build and Package Helm') {
-                        echo 'Build and Package'
-
+                stage('Initialize Helm') {
+                    echo 'Build, Package and Push Chart to ChartMuseum'
+                    //sh 'helm init --client-only'
+                    //sh 'helm version --tiller-namespace $TILLER_NAMESPACE'
                     }
-                    echo 'Master Deploy'
-
-
-                } else if (env.BRANCH_NAME == 'develop'){
-                    stage('Build and Package Helm') {
-                        echo 'Build and Package'
-
-                    }
-                    echo 'Develop Deploy'
-
-                    /* Real Code Below
-
-                    sh """
-                    helm version --tiller-namespace ocp-tiller
-                    helm upgrade --install helpline-tst helm/helpline /
-                    --namespace ${OS_PROJECT_FINAL} /
-                    --tiller-namespace ${TILLER_NAMESPACE} /
-                    -f values-dev.yaml /
-                    --set image.apiTag=${DEPLOY_IMAGE_TAG}
-                    """
-                    */
-
-                    //Deploy with :test
-                    echo 'Image Deployed With:' + DEPLOY_IMAGE_NAME
-                    sh 'helm --help'
-                } else if (env.BRANCH_NAME == 'feature'){
-                    //Deploy with :feature
-                    echo 'Release Deploy'
-                    DEPLOY_IMAGE_NAME = OS_PROJECT_FINAL + '/' + IMAGE_NAME + ':' + FEATURE_IMAGE_TAG
-
-                    echo 'Image Deployed With:' + DEPLOY_IMAGE_NAME
-                    sh 'helm --help'
-                } else if (env.BRANCH_NAME.contains(TAG_FILTER) && COMMIT_HEAD_TAG.contains(TAG_FILTER)){
-                    echo 'Deploy with GitTag'
-                    //Could always simplify and deploy (via helm) with :release. 
-                    DEPLOY_IMAGE_NAME = OS_PROJECT_FINAL + '/' + IMAGE_NAME + ':' + COMMIT_HEAD_TAG
-
-                    echo 'Image Deployed With:' + DEPLOY_IMAGE_NAME
-                    sh 'helm --help'
-                } else {
-                    echo 'No Deploy.'
-                    echo 'Head Tag:' + COMMIT_HEAD_TAG
-                    echo 'Branch Name:' + env.BRANCH_NAME
+                stage('Lint Tests') {
+                    echo 'Lint Test'
+                    //sh 'helm lint ${CHART_LOCATION}'
                 }
+                if (env.BRANCH_NAME == 'master') {
+                    stage('Get Chartname') {
+                        // Read from Chart values.  Get chartVersion
+                        //def chartYaml = readYaml file: 'helm/helpline/Chart.yaml'
+                        //def chartVersion = chartYaml.version.toString()
+                        //if (chartVersion == "") {
+                            //Failed to parse chartVersion. Helm package will fail.
+                        //    echo 'error: chartversion not found'
+                        //}
+                        echo 'Get ChartName from Chart.yaml'
+                    }
+                    stage('Package Helm'){
+                        //Pacakge Helm
+                        //sh "helm package helm/helpline -d helm"
+                        //We know the name of the .tgz will be <chartname>-<chartversion>.tgz
+                        //def packageName = "helpline-${chartVersion}.tgz"
+                        //sh """
+                        //echo "Package Name: ${packageName}"
+                        //"""
+                        echo 'Package helm into .tgz'
+                    }
+                    stage('Overwrite values.yaml') {
+                    // Read from values.yaml:
+                        //def valuesYaml = readYaml file: 'helm/helpline/values.yaml'
+                    // Overwrite the image tag specified in values.yaml.
+                        //valuesYaml.image.tag = 'somevalue'
+                        //sh "rm -f helm/helpline/values.yaml"
+                        //writeYaml file: "helm/helpline/values.yaml", data: valuesYaml
+                        echo 'overwrite values.yaml'
+                    }
+                    stage('Push to ChartMuseum') {
+                        //Push to ChartMuseum
+                        //Could put these credentials in Jenkins...and probably change them in ChartMuseum
+                        //sh """
+                        //curl -u admin:admin -k  \
+                        //--data-binary ${packageName} \
+                        //http://chartmuseum-chartmuseum.chartmuseum:8080/api/charts
+                        //"""
+                        echo 'Push to ChartMuseum'                    
+                    }
+                }
+                stage ('Deploy with Helm') {
+                    //Could make this a "configuration step, and just set all remaining values before a global "deploy"
+                    if (env.BRANCH_NAME == 'master') {
+
+                        /* Real Code Below
+                        sh """
+                        helm version --tiller-namespace ocp-tiller \
+                        helm upgrade --install helpline-tst \
+                        helm/${packageName} \
+                        --namespace ${OS_PROJECT_FINAL} \
+                        --tiller-namespace ${TILLER_NAMESPACE} \
+                        -f values-prd.yaml \
+                        --set image.apiTag=${DEPLOY_IMAGE_TAG}
+                        """
+                        */
+                        echo 'Deploy with helm to ' + OS_PROJECT_FINAL + ' with tag:' + DEPLOY_IMAGE_NAME
+                        sh 'helm --help'
+                    } else if (env.BRANCH_NAME == 'develop'){
+                        
+                        /* Real Code Below
+                        sh """
+                        helm version --tiller-namespace ocp-tiller \
+                        helm upgrade --install helpline-tst \
+                        helm/helpline \
+                        --namespace ${OS_PROJECT_FINAL} \
+                        --tiller-namespace ${TILLER_NAMESPACE} \
+                        -f values-dev.yaml \
+                        --set image.apiTag=${DEPLOY_IMAGE_TAG}
+                        """
+                        */
+
+                        //Deploy with :test
+                        echo 'Deploy with helm to ' + OS_PROJECT_FINAL + ' with tag:' + DEPLOY_IMAGE_NAME
+                        sh 'helm --help'
+                    } else if (env.BRANCH_NAME == 'feature'){
+                        /* Real Code Below
+                        sh """
+                        helm version --tiller-namespace ocp-tiller \
+                        helm upgrade --install helpline-tst \
+                        helm/helpline \
+                        --namespace ${OS_PROJECT_FINAL} \
+                        --tiller-namespace ${TILLER_NAMESPACE} \
+                        -f values-stg.yaml \
+                        --set image.apiTag=${DEPLOY_IMAGE_TAG}
+                        """
+                        */
+
+                        //Deploy with :test
+                        echo 'Deploy with helm to ' + OS_PROJECT_FINAL + ' with tag:' + DEPLOY_IMAGE_NAME
+                        sh 'helm --help'
+                    } else if (env.BRANCH_NAME.contains(TAG_FILTER) && COMMIT_HEAD_TAG.contains(TAG_FILTER)){
+                        /* Real Code Below
+                        sh """
+                        helm version --tiller-namespace ocp-tiller \
+                        helm upgrade --install helpline-tst \
+                        helm/helpline \
+                        --namespace ${OS_PROJECT_FINAL} \
+                        --tiller-namespace ${TILLER_NAMESPACE} \
+                        -f values-rel.yaml \
+                        --set image.apiTag=${DEPLOY_IMAGE_TAG}
+                        """
+                        */
+
+                        //Deploy with :test
+                        echo 'Deploy with helm to ' + OS_PROJECT_FINAL + ' with tag:' + DEPLOY_IMAGE_NAME
+                        sh 'helm --help'
+                        
+                    } else {
+                        echo 'No Deploy.'
+                        echo 'Head Tag:' + COMMIT_HEAD_TAG
+                        echo 'Branch Name:' + env.BRANCH_NAME
+                    }
 
                 //Deploy
             }
