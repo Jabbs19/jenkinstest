@@ -325,6 +325,7 @@ podTemplate(
                         --tiller-namespace ${TILLER_NAMESPACE} \
                         -f ${VALUES_YAML_FINAL} \
                         --set image.apiTag=${DEPLOY_IMAGE_TAG}
+                        --restart-pods
                         """
                         */
 
