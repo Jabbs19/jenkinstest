@@ -170,8 +170,8 @@ podTemplate(
                 }
             }
         }
-        stage('Secrets') {
-            container('openshift') {
+        container('openshift') {
+            stage('Secrets') {
                 echo 'Probably need to build secrets in all environments.'
 
             /* Real Code Below:
@@ -193,12 +193,7 @@ podTemplate(
             }
             */
             }
-        }
-            
-            
-
-        stage('Build Image') {
-            container('openshift') {
+            stage('Build Image') {
                 if (env.BRANCH_NAME == 'master') {
                     echo 'No Build'
                 } else if (env.BRANCH_NAME == 'develop'){
@@ -224,7 +219,7 @@ podTemplate(
                     sh 'oc whoami'
                 } else if (env.BRANCH_NAME.contains(TAG_FILTER) && COMMIT_HEAD_TAG.contains(TAG_FILTER)){
                     echo 'Build on Release'
-                    //Builds as :gittag (e.g. COMMIT_HEAD_TAG)
+                    //Builds as :release (e.g. COMMIT_HEAD_TAG)
                     echo 'Image Tag:' + BUILD_IMAGE_TAG
                     echo 'Full Image Name: ' + BUILD_IMAGE_NAME
                     /* Real Code Below
@@ -233,9 +228,10 @@ podTemplate(
                     */
                     sh 'oc whoami'
 
-                    //Tag as :release also
+                    //Tag as :gittag for deployment
                     echo 'Tag Image as ${COMMIT_HEAD_TAG} also'
-                    echo 'Deploy Image Name (Different than Build): ' + OS_PROJECT_FINAL + '/' + IMAGE_NAME + ':' + COMMIT_HEAD_TAG 
+                    sh "echo 'oc tag ${BUILD_IMAGE_NAME} ${DEPLOY_IMAGE_NAME}'"
+                    echo 'Deploy Image Name (Different than Build): ' + DEPLOY_IMAGE_NAME
 
                     //If we want to "build" as GitTag, we'll need to create a new Build-Config each time, with that GitTag version. Not sure it makes difference. Future idea?
                 }
