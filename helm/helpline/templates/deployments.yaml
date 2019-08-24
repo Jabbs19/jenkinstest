@@ -22,7 +22,7 @@ spec:
       - name:  api 
         image: docker-registry.default.svc:5000/mark-test/helpline:{{ .Values.images.apiTag }}
         imagePullPolicy: Always
-        command: ["bin/sh"]
+        command: ["cat"]
         args: ["sleep 60s"]
         env:
         - name: RAILS_SERVE_STATIC_FILES
