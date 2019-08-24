@@ -102,8 +102,29 @@ podTemplate(
         stage('Secrets') {
             container('openshift') {
                 echo 'Probably need to build secrets in all environments.'
+
+            /* Real Code Below:
+            //Could parameterize secrets to Project Name
+
+            withCredentials([
+            string(credentialsId: 'psd-rails-master-key', variable: 'RAILS_MASTER_KEY'),
+            string(credentialsId: 'psd-helpline-database-password-tst', variable: 'DATABASE_PWD'),
+            string(credentialsId: 'psd-helpline-keybase', variable: 'KEYBASE')
+            ]) {
+            container('jnlp') {
+                sh """
+                oc project ${OS_PROJECT_NAME}
+                oc delete secret "bt-helpline-secret-rails"
+                oc create secret generic bt-helpline-secret-rails --from-literal=RAILS_MASTER_KEY="${RAILS_MASTER_KEY}"
+                oc delete secret "bt-helpline-secret"
+                oc create secret generic bt-helpline-secret --from-literal=database-password="${DATABASE_PWD}" --from-literal=keybase="${KEYBASE}"
+                """
+            }
+            */
             }
         }
+            
+            
 
         stage('Build Image') {
             container('openshift') {
@@ -116,14 +137,24 @@ podTemplate(
                     BUILD_IMAGE_NAME = OS_PROJECT_NAME + '/' + APPLICATION_NAME + ':' + DEVELOP_IMAGE_TAG
                     echo 'Full Image Name:' + BUILD_IMAGE_NAME
 
+                    /* Real Code Below
+                    // Image tag for "build" will already be set in BuildConfig
+                    oc start-build "helpline-build" --from-repo="." --wait=true --follow
+                    */
                     sh 'oc whoami'
                     DEPLOY_IMAGE_NAME = BUILD_IMAGE_NAME
+
+
                 } else if (env.BRANCH_NAME == 'feature'){
                     echo 'Build on Feature'
                     //Builds as :feature or :stage
                     echo 'Image Tag:' + FEATURE_IMAGE_TAG
                     BUILD_IMAGE_NAME = OS_PROJECT_NAME + '/' + APPLICATION_NAME + ':' + FEATURE_IMAGE_TAG
                     echo 'Full Image Name: ' + BUILD_IMAGE_NAME
+                    /* Real Code Below
+                    // Image tag for "build" will already be set in BuildConfig
+                    oc start-build "helpline-build" --from-repo="." --wait=true --follow
+                    */
                     sh 'oc whoami'
                     DEPLOY_IMAGE_NAME = BUILD_IMAGE_NAME
 
@@ -133,12 +164,15 @@ podTemplate(
                     echo 'Image Tag:' + RELEASE_IMAGE_TAG
                     BUILD_IMAGE_NAME = OS_PROJECT_NAME + '/' + APPLICATION_NAME + ':' + RELEASE_IMAGE_TAG
                     echo 'Full Image Name: ' + BUILD_IMAGE_NAME
+                    /* Real Code Below
+                    // Image tag for "build" will already be set in BuildConfig
+                    oc start-build "helpline-build" --from-repo="." --wait=true --follow
+                    */
                     sh 'oc whoami'
 
                     //Tag as :release also
                     echo 'Tag Image as COMMIT_HEAD_TAG also'
-                    DEPLOY_IMAGE_NAME = OS_PROJECT_NAME + '/' + APPLICATION_NAME + ':' + COMMIT_HEAD_TAG
-                    echo 'Deploy Image Name (Different than Build): ' + DEPLOY_IMAGE_NAME 
+                    echo 'Deploy Image Name (Different than Build): ' + OS_PROJECT_NAME + '/' + APPLICATION_NAME + ':' + COMMIT_HEAD_TAG 
 
                     //If we want to "build" as GitTag, we'll need to create a new Build-Config each time, with that GitTag version. Not sure it makes difference. Future idea?
                 }
@@ -155,6 +189,8 @@ podTemplate(
                     echo 'Master Deploy'
 
                 } else if (env.BRANCH_NAME == 'develop'){
+                    DEPLOY_IMAGE_NAME = OS_PROJECT_NAME + '/' + APPLICATION_NAME + ':' + FEATURE_IMAGE_TAG
+
                     echo 'Develop Deploy'
                     //Deploy with :test
                     echo 'Image Deployed With:' + DEPLOY_IMAGE_NAME
@@ -162,10 +198,15 @@ podTemplate(
                 } else if (env.BRANCH_NAME == 'feature'){
                     //Deploy with :feature
                     echo 'Release Deploy'
+                    DEPLOY_IMAGE_NAME = OS_PROJECT_NAME + '/' + APPLICATION_NAME + ':' + FEATURE_IMAGE_TAG
+
                     echo 'Image Deployed With:' + DEPLOY_IMAGE_NAME
                     sh 'helm --help'
                 } else if (env.BRANCH_NAME.contains(TAG_FILTER) && COMMIT_HEAD_TAG.contains(TAG_FILTER)){
                     echo 'Deploy with GitTag'
+                    //Could always simplify and deploy (via helm) with :release. 
+                    DEPLOY_IMAGE_NAME = OS_PROJECT_NAME + '/' + APPLICATION_NAME + ':' + COMMIT_HEAD_TAG
+
                     echo 'Image Deployed With:' + DEPLOY_IMAGE_NAME
                     sh 'helm --help'
                 } else {
