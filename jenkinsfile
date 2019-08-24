@@ -1,16 +1,33 @@
 def label = "jenkins-slave-${UUID.randomUUID().toString()}"
-def OS_PROJECT_PREFIX = "psd-helpline"
-def OS_PROJECT_FINAL = ""
-def COMMIT_HEAD_TAG = ""
+//Production Variables
+def OS_PRD_PROJECT = "psd-helpline-prd"
+def PRD_IMAGE_TAG = "production"
 
-def IMAGE_NAME = 'helpline'
-def DEVELOP_IMAGE_TAG = "test"
+//Release Variables
+def OS_REL_PROJECT = "psd-helpline-rel"
 def RELEASE_IMAGE_TAG = "release"
-def FEATURE_IMAGE_TAG = "feature"
-def DEPLOY_IMAGE_TAG = ""
+
+//Develop Variables
+def OS_DEV_PROJECT = "psd-helpline-tst"
+def DEVELOP_IMAGE_TAG = "test"
+
+//Stage Variables
+def OS_STG_PROJECT = "psd-helpline-stg"
+def STAGE_IMAGE_TAG = "feature"
+
+//Default Variables
+def OS_PROJECT_FINAL = ""
+def BUILD_IMAGE_TAG = ""
 def BUILD_IMAGE_NAME = ""
+def DEPLOY_IMAGE_TAG = ""
 def DEPLOY_IMAGE_NAME = ""
+
+//Git Variables
+def COMMIT_HEAD_TAG = ""
 def TAG_FILTER="prod"
+
+//Image Variables
+def IMAGE_NAME = 'helpline'
 
 //Helm and Tiller Stuff
 def TILLER_NAMESPACE = 'ocp-tiller'
@@ -50,29 +67,30 @@ podTemplate(
                 echo 'Check Branch:'
                 if (env.BRANCH_NAME == 'master') {
                     echo 'Executing on Master'
-                    OS_PROJECT_FINAL = OS_PROJECT_PREFIX + '-prd'
+                    OS_PROJECT_FINAL = OS_PRD_PROJECT
                     CHARTNAME_FINAL = CHARTNAME_PREFIX + '-prd'
                     DEPLOY_IMAGE_TAG = COMMIT_HEAD_TAG
+                    DEPLOY_IMAGE_NAME = OS_PROJECT_FINAL + '/' + IMAGE_NAME + ':' + COMMIT_HEAD_TAG
                 } else if (env.BRANCH_NAME == 'develop'){
                     echo 'Execute on Develop'
-                    OS_PROJECT_FINAL = OS_PROJECT_PREFIX + '-dev'
+                    OS_PROJECT_FINAL = OS_DEV_PROJECT
                     CHARTNAME_FINAL = CHARTNAME_PREFIX + '-dev'
                     BUILD_IMAGE_NAME = OS_PROJECT_FINAL + '/' + IMAGE_NAME + ':' + DEVELOP_IMAGE_TAG
                     DEPLOY_IMAGE_TAG = DEVELOP_IMAGE_TAG
-                    DEPLOY_IMAGE_NAME = BUILD_IMAGE_NAME
+                    DEPLOY_IMAGE_NAME = OS_PROJECT_FINAL + '/' + IMAGE_NAME + ':' + DEVELOP_IMAGE_TAG
 
-                } else if (env.BRANCH_NAME == 'feature'){
-                    echo 'Execute on Feature'
-                    OS_PROJECT_FINAL = OS_PROJECT_PREFIX + '-stg'
+                } else if (env.BRANCH_NAME == 'stage'){
+                    echo 'Execute on Stage'
+                    OS_PROJECT_FINAL = OS_STG_PROJECT
                     CHARTNAME_FINAL = CHARTNAME_PREFIX + '-stg'
-                    DEPLOY_IMAGE_TAG = FEATURE_IMAGE_TAG
-                    BUILD_IMAGE_NAME = OS_PROJECT_FINAL + '/' + IMAGE_NAME + ':' + FEATURE_IMAGE_TAG
-                    DEPLOY_IMAGE_NAME = BUILD_IMAGE_NAME
+                    BUILD_IMAGE_NAME = OS_PROJECT_FINAL + '/' + IMAGE_NAME + ':' + STAGE_IMAGE_TAG
+                    DEPLOY_IMAGE_TAG = STAGE_IMAGE_TAG
+                    DEPLOY_IMAGE_NAME = OS_PROJECT_FINAL + '/' + IMAGE_NAME + ':' + STAGE_IMAGE_TAG
 
                 } else if (env.BRANCH_NAME.contains(TAG_FILTER) && COMMIT_HEAD_TAG.contains(TAG_FILTER)){
                     echo 'Execute on specific "Release" Tag of:' + TAG_FILTER
-                    OS_PROJECT_FINAL = OS_PROJECT_PREFIX + '-uat'
-                    CHARTNAME_FINAL = CHARTNAME_PREFIX + '-uat'
+                    OS_PROJECT_FINAL = OS_REL_PROJECT
+                    CHARTNAME_FINAL = CHARTNAME_PREFIX + '-rel'
                     BUILD_IMAGE_NAME = OS_PROJECT_FINAL + '/' + IMAGE_NAME + ':' + RELEASE_IMAGE_TAG
                     DEPLOY_IMAGE_TAG = COMMIT_HEAD_TAG
                     DEPLOY_IMAGE_NAME = OS_PROJECT_FINAL + '/' + IMAGE_NAME + ':' + COMMIT_HEAD_TAG
@@ -84,6 +102,11 @@ podTemplate(
                     echo 'Branch Name:' + env.BRANCH_NAME
                 }
                 echo 'OpenShift Project Name: ' + OS_PROJECT_FINAL
+                sh """
+                echo 'Here are some variables:'
+                echo '${BUILD_IMAGE_NAME}'
+                echo '$BUILD_IMAGE_NAME'
+                """
             }
         }
         stage('Unit Test') {
@@ -172,7 +195,7 @@ podTemplate(
                 } else if (env.BRANCH_NAME == 'develop'){
                     echo 'Build on Develop'
                     //Builds as :test or :develop
-                    echo 'Image Tag:' + DEVELOP_IMAGE_TAG
+                    echo 'Image Tag:' + BUILD_IMAGE_TAG
                     echo 'Full Image Name:' + BUILD_IMAGE_NAME
 
                     /* Real Code Below
@@ -183,7 +206,7 @@ podTemplate(
                 } else if (env.BRANCH_NAME == 'feature'){
                     echo 'Build on Feature'
                     //Builds as :feature or :stage
-                    echo 'Image Tag:' + FEATURE_IMAGE_TAG
+                    echo 'Image Tag:' + BUILD_IMAGE_TAG
                     echo 'Full Image Name: ' + BUILD_IMAGE_NAME
                     /* Real Code Below
                     // Image tag for "build" will already be set in BuildConfig
@@ -193,7 +216,7 @@ podTemplate(
                 } else if (env.BRANCH_NAME.contains(TAG_FILTER) && COMMIT_HEAD_TAG.contains(TAG_FILTER)){
                     echo 'Build on Release'
                     //Builds as :gittag (e.g. COMMIT_HEAD_TAG)
-                    echo 'Image Tag:' + RELEASE_IMAGE_TAG
+                    echo 'Image Tag:' + BUILD_IMAGE_TAG
                     echo 'Full Image Name: ' + BUILD_IMAGE_NAME
                     /* Real Code Below
                     // Image tag for "build" will already be set in BuildConfig
@@ -202,7 +225,7 @@ podTemplate(
                     sh 'oc whoami'
 
                     //Tag as :release also
-                    echo 'Tag Image as COMMIT_HEAD_TAG also'
+                    echo 'Tag Image as ${COMMIT_HEAD_TAG} also'
                     echo 'Deploy Image Name (Different than Build): ' + OS_PROJECT_FINAL + '/' + IMAGE_NAME + ':' + COMMIT_HEAD_TAG 
 
                     //If we want to "build" as GitTag, we'll need to create a new Build-Config each time, with that GitTag version. Not sure it makes difference. Future idea?
