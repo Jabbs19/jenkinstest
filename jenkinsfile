@@ -88,7 +88,7 @@ podTemplate(
                     error "No Git Version at Master Head"
                     } else {
                         println(COMMIT_HEAD_TAG)                
-                        if (COMMIT_HEAD_TAG.substring(0,TAG_FILTER.length()) = TAG_FILTER) {
+                        if (COMMIT_HEAD_TAG.substring(0,TAG_FILTER.length()) == TAG_FILTER) {
                             APP_VERSION = COMMIT_HEAD_TAG.substring(TAG_FILTER.length(),COMMIT_HEAD_TAG.length())
                         } else {
                             APP_VERSION = COMMIT_HEAD_TAG
