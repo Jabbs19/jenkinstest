@@ -19,8 +19,14 @@ def OS_STG_PROJECT = "psd-helpline-stg"
 def STAGE_IMAGE_TAG = "feature"
 def STAGE_HELM_VALUES_LOC = "helm/helpline/values.yaml"
 
+//HotFix Variables
+def OS_HOTFIX_PROJECT = "psd-helpline-stg"
+def HOTFIX_IMAGE_TAG = "hotfix"
+//Uses same helm as PRD.
+
 //Git Variables
-def TAG_FILTER="prod"
+def TAG_FILTER="prod-"
+def HOTFIX_TAG_FILTER = "hotfix-"
 
 //Image Variables
 def IMAGE_NAME = 'helpline'
@@ -32,7 +38,6 @@ def CHART_LOCATION = 'helm/helpline'
 def TGZ_DEST_DIR = 'helm'
 
 //Global Variables
-def OS_PROJECT_FINAL = ""
 def BUILD_IMAGE_TAG = ""
 def BUILD_IMAGE_NAME = ""
 def DEPLOY_IMAGE_TAG = ""
@@ -41,6 +46,8 @@ def COMMIT_HEAD_TAG = ""
 def RELEASE_NAME_FINAL = ""
 def VALUES_YAML_FINAL = ""
 def APP_VERSION = ""
+def OS_BUILD_PROJECT = ""
+def OS_DEPLOY_PROJECT = ""
 
 podTemplate(
     label: label,
@@ -76,58 +83,81 @@ podTemplate(
                 echo 'Set Branch Variables Branch:'
                 if (env.BRANCH_NAME == 'master') {
                     echo 'Executing on Master'
-                    OS_PROJECT_FINAL = OS_PRD_PROJECT
-                    RELEASE_NAME_FINAL = CHARTNAME_PREFIX + '-prd'
+                    OS_DEPLOY_PROJECT = OS_PRD_PROJECT
                     DEPLOY_IMAGE_TAG = COMMIT_HEAD_TAG
-                    DEPLOY_IMAGE_NAME = OS_PROJECT_FINAL + '/' + IMAGE_NAME + ':' + COMMIT_HEAD_TAG
+                    DEPLOY_IMAGE_NAME = OS_DEPLOY_PROJECT + '/' + IMAGE_NAME + ':' + COMMIT_HEAD_TAG
+                    RELEASE_NAME_FINAL = CHARTNAME_PREFIX + '-prd'
                     VALUES_YAML_FINAL = PRD_HELM_VALUES_LOC
                     //Tags for Master Release Checks.  Could add more filters, sig checks, etc.
                     if (COMMIT_HEAD_TAG == "") {
-                    error "No Git Version at Master Head"
+                        error "No Git Version at Master Head"
                     } else {
-                        println(COMMIT_HEAD_TAG)                
+                        echo COMMIT_HEAD_TAG 
+                        //Get App Version for Regular Production Release Filter
                         if (COMMIT_HEAD_TAG.substring(0,TAG_FILTER.length()) == TAG_FILTER) {
                             APP_VERSION = COMMIT_HEAD_TAG.substring(TAG_FILTER.length(),COMMIT_HEAD_TAG.length())
+                        } else if (COMMIT_HEAD_TAG.substring(0,HOTFIX_TAG_FILTER.length()) == HOTFIX_TAG_FILTER) {
+                            APP_VERSION = COMMIT_HEAD_TAG.substring(HOTFIX_TAG_FILTER.length(),COMMIT_HEAD_TAG.length())
                         } else {
-                            APP_VERSION = COMMIT_HEAD_TAG
+                            APP_VERSION = ""COMMIT_HEAD_TAG""
                         }
                     }
                     echo 'App Version: ' + APP_VERSION
                 } else if (env.BRANCH_NAME == 'develop'){
                     echo 'Execute on Develop'
-                    OS_PROJECT_FINAL = OS_DEV_PROJECT
-                    RELEASE_NAME_FINAL = CHARTNAME_PREFIX + '-dev'
-                    BUILD_IMAGE_NAME = OS_PROJECT_FINAL + '/' + IMAGE_NAME + ':' + DEVELOP_IMAGE_TAG
+                    OS_BUILD_PROJECT = OS_DEV_PROJECT
+                    BUILD_IMAGE_TAG = DEVELOP_IMAGE_TAG
+                    BUILD_IMAGE_NAME = OS_BUILD_PROJECT + '/' + IMAGE_NAME + ':' + BUILD_IMAGE_TAG
+                    OS_DEPLOY_PROJECT = OS_DEV_PROJECT
                     DEPLOY_IMAGE_TAG = DEVELOP_IMAGE_TAG
-                    DEPLOY_IMAGE_NAME = OS_PROJECT_FINAL + '/' + IMAGE_NAME + ':' + DEVELOP_IMAGE_TAG
+                    DEPLOY_IMAGE_NAME = OS_DEPLOY_PROJECT + '/' + IMAGE_NAME + ':' + DEPLOY_IMAGE_TAG
                     VALUES_YAML_FINAL = DEVELOP_HELM_VALUES_LOC
+                    RELEASE_NAME_FINAL = CHARTNAME_PREFIX + '-dev'
+
                 } else if (env.BRANCH_NAME == 'stage'){
                     echo 'Execute on Stage'
-                    OS_PROJECT_FINAL = OS_STG_PROJECT
-                    RELEASE_NAME_FINAL = CHARTNAME_PREFIX + '-stg'
-                    BUILD_IMAGE_NAME = OS_PROJECT_FINAL + '/' + IMAGE_NAME + ':' + STAGE_IMAGE_TAG
+                    OS_BUILD_PROJECT = OS_STG_PROJECT
+                    BUILD_IMAGE_TAG = STAGE_IMAGE_TAG
+                    BUILD_IMAGE_NAME = OS_BUILD_PROJECT + '/' + IMAGE_NAME + ':' + BUILD_IMAGE_TAG
+                    OS_DEPLOY_PROJECT = OS_STG_PROJECT
                     DEPLOY_IMAGE_TAG = STAGE_IMAGE_TAG
-                    DEPLOY_IMAGE_NAME = OS_PROJECT_FINAL + '/' + IMAGE_NAME + ':' + STAGE_IMAGE_TAG
+                    DEPLOY_IMAGE_NAME = OS_DEPLOY_PROJECT + '/' + IMAGE_NAME + ':' + DEPLOY_IMAGE_TAG
                     VALUES_YAML_FINAL = STAGE_HELM_VALUES_LOC
+                    RELEASE_NAME_FINAL = CHARTNAME_PREFIX + '-stg'
+
 
                 } else if (env.BRANCH_NAME.contains(TAG_FILTER) && COMMIT_HEAD_TAG.contains(TAG_FILTER)){
                     echo 'Execute on specific "Release" Tag of:' + TAG_FILTER
-                    OS_PROJECT_FINAL = OS_REL_PROJECT
-                    RELEASE_NAME_FINAL = CHARTNAME_PREFIX + '-rel'
-                    BUILD_IMAGE_NAME = OS_PROJECT_FINAL + '/' + IMAGE_NAME + ':' + RELEASE_IMAGE_TAG
+                    OS_BUILD_PROJECT = OS_REL_PROJECT
+                    BUILD_IMAGE_TAG = RELEASE_IMAGE_TAG
+                    BUILD_IMAGE_NAME = OS_BUILD_PROJECT + '/' + IMAGE_NAME + ':' + BUILD_IMAGE_TAG
+                    OS_DEPLOY_PROJECT = OS_REL_PROJECT
                     DEPLOY_IMAGE_TAG = COMMIT_HEAD_TAG
-                    DEPLOY_IMAGE_NAME = OS_PROJECT_FINAL + '/' + IMAGE_NAME + ':' + COMMIT_HEAD_TAG
+                    DEPLOY_IMAGE_NAME = OS_DEPLOY_PROJECT + '/' + IMAGE_NAME + ':' + DEPLOY_IMAGE_TAG
                     VALUES_YAML_FINAL = RELEASE_HELM_VALUES_LOC
+                    RELEASE_NAME_FINAL = CHARTNAME_PREFIX + '-rel'
+
+                } else if (env.BRANCH_NAME.contains(HOTFIX_TAG_FILTER) && COMMIT_HEAD_TAG.contains(HOTFIX_TAG_FILTER)){
+                    echo 'Execute on specific "HotFix" Tag of:' + HOTFIX_TAG_FILTER
+                    OS_BUILD_PROJECT = OS_REL_PROJECT
+                    BUILD_IMAGE_TAG = HOTFIX_IMAGE_TAG
+                    BUILD_IMAGE_NAME = OS_BUILD_PROJECT + '/' + IMAGE_NAME + ':' + BUILD_IMAGE_TAG
+                    OS_DEPLOY_PROJECT = OS_PRD_PROJECT
+                    DEPLOY_IMAGE_TAG = COMMIT_HEAD_TAG
+                    DEPLOY_IMAGE_NAME = OS_DEPLOY_PROJECT + '/' + IMAGE_NAME + ':' + DEPLOY_IMAGE_TAG
+                    VALUES_YAML_FINAL = PRD_HELM_VALUES_LOC
+                    RELEASE_NAME_FINAL = CHARTNAME_PREFIX + '-prd'
+
                 }
                 else {
                     echo 'Non Branch or Tag execution.'
                     echo 'Head Tag:' + COMMIT_HEAD_TAG
                     echo 'Branch Name:' + env.BRANCH_NAME
                 }
-                echo 'OpenShift Project Name: ' + OS_PROJECT_FINAL
+                echo 'OpenShift Project Name: ' + OS_DEPLOY_PROJECT
                 sh """
                 echo 'Here are some variables:'
-                echo '${OS_PROJECT_FINAL}'
+                echo '${OS_DEPLOY_PROJECT}'
                 """
             }
         }
@@ -137,7 +167,7 @@ podTemplate(
                     echo 'No Unit Test'
                 } else if (env.BRANCH_NAME == 'develop'){
                     echo 'No Unit Test'
-                } else if (env.BRANCH_NAME == 'feature'){
+                } else if (env.BRANCH_NAME == 'stage'){
                     echo 'No Unit Test'
                 } else if (env.BRANCH_NAME.contains(TAG_FILTER) && COMMIT_HEAD_TAG.contains(TAG_FILTER)){
                     echo 'Execute Unit Tests'
@@ -159,8 +189,9 @@ podTemplate(
                         }
                     }
                     */
-                }
-                else {
+                } else if (env.BRANCH_NAME.contains(HOTFIX_TAG_FILTER) && COMMIT_HEAD_TAG.contains(HOTFIX_TAG_FILTER)){
+                    echo 'No Unit Test'
+                { else {
                     echo 'No Unit Test'
                     echo 'Head Tag:' + COMMIT_HEAD_TAG
                     echo 'Branch Name:' + env.BRANCH_NAME
@@ -173,12 +204,13 @@ podTemplate(
                     echo 'No Checkmarx'
                 } else if (env.BRANCH_NAME == 'develop'){
                     echo 'No Checkmarx'
-                } else if (env.BRANCH_NAME == 'feature'){
+                } else if (env.BRANCH_NAME == 'stage'){
                     echo 'No Checkmarx'
                 } else if (env.BRANCH_NAME.contains(TAG_FILTER) && COMMIT_HEAD_TAG.contains(TAG_FILTER)){
                     echo 'Execute Checkmarx'
-                }
-                else {
+                } else if (env.BRANCH_NAME.contains(HOTFIX_TAG_FILTER) && COMMIT_HEAD_TAG.contains(HOTFIX_TAG_FILTER)){
+                    echo 'No Checkmarx'
+                {else {
                     echo 'No Checkmarx'
                     echo 'Head Tag:' + COMMIT_HEAD_TAG
                     echo 'Branch Name:' + env.BRANCH_NAME
@@ -187,8 +219,22 @@ podTemplate(
         }
         container('openshift') {
             stage('Create Secrets') {
+                if (env.BRANCH_NAME == 'master') {
+                    echo '1. Delete All Secrets in PRD. 2. Create Application Secrets in PRD.'
+                } else if (env.BRANCH_NAME == 'develop'){
+                    echo '1. Delete All Secrets in TST. 2. Create Image build secretsin TST. 3. Create Application Secrets in TST.'
+                } else if (env.BRANCH_NAME == 'stage'){
+                    echo '1. Delete All Secrets in STG. 2. Create Image build secretsin TST. 3. Create Application Secrets in TST.'
+                } else if (env.BRANCH_NAME.contains(TAG_FILTER) && COMMIT_HEAD_TAG.contains(TAG_FILTER)){
+                    echo '1. Delete All Secrets. 2. Create Image build secrets. 3. Create Application Secrets.'
+                } else if (env.BRANCH_NAME.contains(HOTFIX_TAG_FILTER) && COMMIT_HEAD_TAG.contains(HOTFIX_TAG_FILTER)){
+                    echo 'No Checkmarx'
+                {else {
+                    echo 'No Checkmarx'
+                    echo 'Head Tag:' + COMMIT_HEAD_TAG
+                    echo 'Branch Name:' + env.BRANCH_NAME
+                }
                 echo 'Probably need to build secrets in all environments.'
-                echo '1. Delete All Secrets. 2. Create Image build secrets. 3. Create Application Secrets.'
             /* Real Code Below:
             //Could parameterize secrets to Project Name
 
@@ -219,27 +265,27 @@ podTemplate(
 
                     /* Real Code Below
                     // Image tag for "build" will already be set in BuildConfig
-                    oc start-build "helpline-build" --from-repo="." --wait=true --follow -n ${OS_PROJECT_FINAL}
+                    oc start-build "helpline-build" --from-repo="." --wait=true --follow -n ${OS_BUILD_PROJECT}
                     */
                     sh 'oc whoami'
-                } else if (env.BRANCH_NAME == 'feature'){
+                } else if (env.BRANCH_NAME == 'stage'){
                     echo 'Build on Feature'
                     //Builds as :feature or :stage
                     echo 'Image Tag:' + BUILD_IMAGE_TAG
                     echo 'Full Image Name: ' + BUILD_IMAGE_NAME
                     /* Real Code Below
                     // Image tag for "build" will already be set in BuildConfig
-                    oc start-build "helpline-build" --from-repo="." --wait=true --follow -n ${OS_PROJECT_FINAL}
+                    oc start-build "helpline-build" --from-repo="." --wait=true --follow -n ${OS_BUILD_PROJECT}
                     */
                     sh 'oc whoami'
                 } else if (env.BRANCH_NAME.contains(TAG_FILTER) && COMMIT_HEAD_TAG.contains(TAG_FILTER)){
                     echo 'Build on Release'
-                    //Builds as :release (e.g. COMMIT_HEAD_TAG)
+                    //Builds as :release 
                     echo 'Image Tag:' + BUILD_IMAGE_TAG
                     echo 'Full Image Name: ' + BUILD_IMAGE_NAME
                     /* Real Code Below
                     // Image tag for "build" will already be set in BuildConfig
-                    oc start-build "helpline-build" --from-repo="." --wait=true --follow -n ${OS_PROJECT_FINAL}
+                    oc start-build "helpline-build" --from-repo="." --wait=true --follow -n ${OS_BUILD_PROJECT}
                     */
                     sh 'oc whoami'
 
@@ -249,7 +295,25 @@ podTemplate(
                     echo 'Deploy Image Name (Different than Build): ' + DEPLOY_IMAGE_NAME
 
                     //If we want to "build" as GitTag, we'll need to create a new Build-Config each time, with that GitTag version. Not sure it makes difference. Future idea?
-                }
+                } else if (env.BRANCH_NAME.contains(HOTFIX_TAG_FILTER) && COMMIT_HEAD_TAG.contains(HOTFIX_TAG_FILTER)){
+                    echo 'Build on HotFix'
+                    //Builds as :hotfix 
+                    echo 'Image Tag:' + BUILD_IMAGE_TAG
+                    //Will need to either create a build-config on the fly, or create one ahead of time specifically for hotfix.
+                    echo 'Full Image Name: ' + BUILD_IMAGE_NAME
+                    /* Real Code Below
+                    // Image tag for "build" will already be set in BuildConfig
+                    oc start-build "helpline-build-hotfix" --from-repo="." --wait=true --follow -n ${OS_BUILD_PROJECT}
+                    */
+                    sh 'oc whoami'
+
+                    //Tag as :gittag for deployment
+                    echo 'Tag Image as Hot Fix App Version also'
+                    sh "echo 'oc tag ${BUILD_IMAGE_NAME} ${DEPLOY_IMAGE_NAME}'"
+                    echo 'No Deployment to Release environment, just a build of image.'
+
+                    //If we want to "build" as GitTag, we'll need to create a new Build-Config each time, with that GitTag version. Not sure it makes difference. Future idea?
+                 {
                 else {
                     echo 'No Build.'
                     echo 'Head Tag:' + COMMIT_HEAD_TAG
@@ -272,7 +336,7 @@ podTemplate(
                     echo 'Run Helm Lint Test'
                     //sh 'helm lint ${CHART_LOCATION}'
                 }
-                if (env.BRANCH_NAME == 'master') {
+                if (env.BRANCH_NAME == 'master') || (env.BRANCH_NAME.contains(HOTFIX_TAG_FILTER) && COMMIT_HEAD_TAG.contains(HOTFIX_TAG_FILTER)){
                     stage('Get Chartname') {
                         // Read from Chart values.  Get chartVersion
                         //def chartYaml = readYaml file: 'helm/helpline/Chart.yaml'
@@ -315,7 +379,7 @@ podTemplate(
                 }
                 stage ('Deploy with Helm') {
                     //Could make this a "configuration step, and just set all remaining values before a global "deploy"
-                    if (env.BRANCH_NAME == 'master') {
+                    if (env.BRANCH_NAME == 'master' ){
                         //Set Full path of TGZ
                         //def TGZ_PATH = TGZ_DEST_DIR + '/' + PACKAGE_NAME 
                         
@@ -324,32 +388,51 @@ podTemplate(
                         helm version --tiller-namespace ${TILLER_NAMESPACE} \
                         helm upgrade --install ${RELEASE_NAME_FINAL} \
                         ${TGZ_PATH} \
-                        --namespace ${OS_PROJECT_FINAL} \
+                        --namespace ${OS_DEPLOY_PROJECT} \
                         --tiller-namespace ${TILLER_NAMESPACE} \
                         -f ${VALUES_YAML_FINAL} \
+                        --set image.apiRepository=${OS_DEPLOY_PROJECT}
                         --set image.apiTag=${DEPLOY_IMAGE_TAG}
                         """
                         */
                         
-                        echo 'Deploy with helm to ' + OS_PROJECT_FINAL + ' with tag:' + DEPLOY_IMAGE_NAME
+                        echo 'Deploy Production with helm to ' + OS_DEPLOY_PROJECT + ' with tag:' + DEPLOY_IMAGE_NAME
                         sh 'helm --help'
-                    } else if (env.BRANCH_NAME == 'develop' || env.BRANCH_NAME == 'feature' || (env.BRANCH_NAME.contains(TAG_FILTER) && COMMIT_HEAD_TAG.contains(TAG_FILTER))){
-                        CHART_LOCATION
+                    } else if ((env.BRANCH_NAME.contains(HOTFIX_TAG_FILTER) && COMMIT_HEAD_TAG.contains(HOTFIX_TAG_FILTER)) {
+                        //Currently the same as Master Release, but if we want to do something different with hotfixes, we can do it here.
+                        //Set Full path of TGZ
+                        //def TGZ_PATH = TGZ_DEST_DIR + '/' + PACKAGE_NAME 
+                        
                         /* Real Code Below
                         sh """
                         helm version --tiller-namespace ${TILLER_NAMESPACE} \
-                        helm upgrade --install RELEASE_NAME_FINAL \
-                        ${CHART_LOCATION} \
-                        --namespace ${OS_PROJECT_FINAL} \
+                        helm upgrade --install ${RELEASE_NAME_FINAL} \
+                        ${TGZ_PATH} \
+                        --namespace ${OS_DEPLOY_PROJECT} \
                         --tiller-namespace ${TILLER_NAMESPACE} \
                         -f ${VALUES_YAML_FINAL} \
+                        --set image.apiRepository=${OS_DEPLOY_PROJECT}
                         --set image.apiTag=${DEPLOY_IMAGE_TAG}
-                        --restart-pods
+                        """
+                        */
+                        echo 'Deploy HotFix (Producion) with helm to ' + OS_DEPLOY_PROJECT + ' with tag:' + DEPLOY_IMAGE_NAME
+                        sh 'helm --help'
+                    } else if (env.BRANCH_NAME == 'develop' || env.BRANCH_NAME == 'stage' || (env.BRANCH_NAME.contains(TAG_FILTER) && COMMIT_HEAD_TAG.contains(TAG_FILTER))){
+                        /* Real Code Below
+                        sh """
+                        helm version --tiller-namespace ${TILLER_NAMESPACE} \
+                        helm upgrade --install ${RELEASE_NAME_FINAL} \
+                        ${CHART_LOCATION} \
+                        --namespace ${OS_DEPLOY_PROJECT} \
+                        --tiller-namespace ${TILLER_NAMESPACE} \
+                        -f ${VALUES_YAML_FINAL} \
+                        --set image.apiRepository=${OS_DEPLOY_PROJECT}
+                        --set image.apiTag=${DEPLOY_IMAGE_TAG}
                         """
                         */
 
                         //Deploy with :test
-                        echo 'Deploy with helm to ' + OS_PROJECT_FINAL + ' with tag:' + DEPLOY_IMAGE_NAME
+                        echo 'Deploy with helm to ' + OS_DEPLOY_PROJECT + ' with tag:' + DEPLOY_IMAGE_NAME
                         sh 'helm --help'
                     }  else {
                         echo 'No Deploy.'
