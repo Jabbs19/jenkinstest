@@ -58,14 +58,12 @@ podTemplate(
 ) {
     node(label) {
         stage('Init') {
-         /* Init Stuff         
           sh """
             pwd
             env
             find ${HOME}
             df -h
             """
-        */
         }
         container('jnlp') {
             stage('SCM Checkout') {
