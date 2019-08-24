@@ -133,7 +133,7 @@ podTemplate(
                     echo 'Deploy on GitTag'
                     echo 'Image Tag:' + COMMIT_HEAD_TAG
                     sh 'helm --help'
-                else {
+                } else {
                     echo 'No Deploy. Should we name feature, or leave open?'
                     echo 'Head Tag:' + COMMIT_HEAD_TAG
                     echo 'Branch Name:' + env.BRANCH_NAME
