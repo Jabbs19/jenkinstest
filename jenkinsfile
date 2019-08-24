@@ -219,7 +219,6 @@ podTemplate(
         }
         
         container('openshift') {
-            /*
             stage('Create Secrets') {
                 if (env.BRANCH_NAME == 'master') {
                     echo '1. Delete All Secrets in PRD. 2. Create Application Secrets in PRD.'
@@ -241,19 +240,19 @@ podTemplate(
             //Could parameterize secrets to Project Name
 
             withCredentials([
-            string(credentialsId: 'psd-rails-master-key', variable: 'RAILS_MASTER_KEY'),
-            string(credentialsId: 'psd-helpline-database-password-tst', variable: 'DATABASE_PWD'),
-            string(credentialsId: 'psd-helpline-keybase', variable: 'KEYBASE')
-            ]) {
-            container('jnlp') {
-                sh """
-                oc project ${OS_PROJECT_FINAL}
-                oc delete secret "bt-helpline-secret-rails"
-                oc create secret generic bt-helpline-secret-rails --from-literal=RAILS_MASTER_KEY="${RAILS_MASTER_KEY}"
-                oc delete secret "bt-helpline-secret"
-                oc create secret generic bt-helpline-secret --from-literal=database-password="${DATABASE_PWD}" --from-literal=keybase="${KEYBASE}"
-                """
-            }
+                string(credentialsId: 'psd-rails-master-key', variable: 'RAILS_MASTER_KEY'),
+                string(credentialsId: 'psd-helpline-database-password-tst', variable: 'DATABASE_PWD'),
+                string(credentialsId: 'psd-helpline-keybase', variable: 'KEYBASE')
+                ]) {
+                    container('jnlp') {
+                        sh """
+                        oc project ${OS_PROJECT_FINAL}
+                        oc delete secret "bt-helpline-secret-rails"
+                        oc create secret generic bt-helpline-secret-rails --from-literal=RAILS_MASTER_KEY="${RAILS_MASTER_KEY}"
+                        oc delete secret "bt-helpline-secret"
+                        oc create secret generic bt-helpline-secret --from-literal=database-password="${DATABASE_PWD}" --from-literal=keybase="${KEYBASE}"
+                        """
+                    }
             
             }
             */
