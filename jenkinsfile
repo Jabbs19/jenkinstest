@@ -19,16 +19,7 @@ def OS_STG_PROJECT = "psd-helpline-stg"
 def STAGE_IMAGE_TAG = "feature"
 def STAGE_HELM_VALUES_LOC = "helm/helpline/values.yaml"
 
-
-//Default Variables
-def OS_PROJECT_FINAL = ""
-def BUILD_IMAGE_TAG = ""
-def BUILD_IMAGE_NAME = ""
-def DEPLOY_IMAGE_TAG = ""
-def DEPLOY_IMAGE_NAME = ""
-
 //Git Variables
-def COMMIT_HEAD_TAG = ""
 def TAG_FILTER="prod"
 
 //Image Variables
@@ -39,6 +30,14 @@ def TILLER_NAMESPACE = 'ocp-tiller'
 def CHARTNAME_PREFIX = 'helpline'
 def CHART_LOCATION = 'helm/helpline'
 def TGZ_DEST_DIR = 'helm'
+
+//Global Variables
+def OS_PROJECT_FINAL = ""
+def BUILD_IMAGE_TAG = ""
+def BUILD_IMAGE_NAME = ""
+def DEPLOY_IMAGE_TAG = ""
+def DEPLOY_IMAGE_NAME = ""
+def COMMIT_HEAD_TAG = ""
 def RELEASE_NAME_FINAL = ""
 def VALUES_YAML_FINAL = ""
 
@@ -113,8 +112,7 @@ podTemplate(
                 echo 'OpenShift Project Name: ' + OS_PROJECT_FINAL
                 sh """
                 echo 'Here are some variables:'
-                echo '${BUILD_IMAGE_NAME}'
-                echo '$BUILD_IMAGE_NAME'
+                echo '${OS_PROJECT_FINAL}'
                 """
             }
         }
@@ -128,8 +126,10 @@ podTemplate(
                     echo 'No Unit Test'
                 } else if (env.BRANCH_NAME.contains(TAG_FILTER) && COMMIT_HEAD_TAG.contains(TAG_FILTER)){
                     echo 'Execute Unit Tests'
-                    echo 'ruby -v'
-                    /*
+                    sh """
+                    ruby -v
+                    """
+                    /* Real Code
                     withCredentials([string(credentialsId: 'psd-rails-master-key', variable: 'RAILS_MASTER_KEY')]) {
                         container('ruby') {
                           sh """
@@ -204,7 +204,7 @@ podTemplate(
 
                     /* Real Code Below
                     // Image tag for "build" will already be set in BuildConfig
-                    oc start-build "helpline-build" --from-repo="." --wait=true --follow
+                    oc start-build "helpline-build" --from-repo="." --wait=true --follow -n ${OS_PROJECT_FINAL}
                     */
                     sh 'oc whoami'
                 } else if (env.BRANCH_NAME == 'feature'){
@@ -214,7 +214,7 @@ podTemplate(
                     echo 'Full Image Name: ' + BUILD_IMAGE_NAME
                     /* Real Code Below
                     // Image tag for "build" will already be set in BuildConfig
-                    oc start-build "helpline-build" --from-repo="." --wait=true --follow
+                    oc start-build "helpline-build" --from-repo="." --wait=true --follow -n ${OS_PROJECT_FINAL}
                     */
                     sh 'oc whoami'
                 } else if (env.BRANCH_NAME.contains(TAG_FILTER) && COMMIT_HEAD_TAG.contains(TAG_FILTER)){
@@ -224,12 +224,12 @@ podTemplate(
                     echo 'Full Image Name: ' + BUILD_IMAGE_NAME
                     /* Real Code Below
                     // Image tag for "build" will already be set in BuildConfig
-                    oc start-build "helpline-build" --from-repo="." --wait=true --follow
+                    oc start-build "helpline-build" --from-repo="." --wait=true --follow -n ${OS_PROJECT_FINAL}
                     */
                     sh 'oc whoami'
 
                     //Tag as :gittag for deployment
-                    echo 'Tag Image as ${COMMIT_HEAD_TAG} also'
+                    echo 'Tag Image as COMMIT_HEAD_TAG also'
                     sh "echo 'oc tag ${BUILD_IMAGE_NAME} ${DEPLOY_IMAGE_NAME}'"
                     echo 'Deploy Image Name (Different than Build): ' + DEPLOY_IMAGE_NAME
 
