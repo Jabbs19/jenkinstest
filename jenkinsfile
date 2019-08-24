@@ -1,15 +1,21 @@
 def label = "jenkins-slave-${UUID.randomUUID().toString()}"
 def OS_PROJECT_PREFIX = "psd-helpline"
-def OS_PROJECT_NAME = ""
+def OS_PROJECT_FINAL = ""
 def COMMIT_HEAD_TAG = ""
 
-def APPLICATION_NAME = 'helpline'
+def IMAGE_NAME = 'helpline'
 def DEVELOP_IMAGE_TAG = "test"
 def RELEASE_IMAGE_TAG = "release"
 def FEATURE_IMAGE_TAG = "feature"
+def DEPLOY_IMAGE_TAG = ""
 def BUILD_IMAGE_NAME = ""
 def DEPLOY_IMAGE_NAME = ""
 def TAG_FILTER="prod"
+
+//Helm and Tiller Stuff
+def TILLER_NAMESPACE = 'ocp-tiller'
+def CHARTNAME_PREFIX = 'helpline'
+def CHARTNAME_FINAL = ""
 
 podTemplate(
     label: label,
@@ -43,23 +49,40 @@ podTemplate(
                 echo 'Check Branch:'
                 if (env.BRANCH_NAME == 'master') {
                     echo 'Executing on Master'
-                    OS_PROJECT_NAME = OS_PROJECT_PREFIX + '-prd'
+                    OS_PROJECT_FINAL = OS_PROJECT_PREFIX + '-prd'
+                    CHARTNAME_FINAL = CHARTNAME_PREFIX + '-prd'
+                    DEPLOY_IMAGE_TAG = COMMIT_HEAD_TAG
                 } else if (env.BRANCH_NAME == 'develop'){
                     echo 'Execute on Develop'
-                    OS_PROJECT_NAME = OS_PROJECT_PREFIX + '-dev'
+                    OS_PROJECT_FINAL = OS_PROJECT_PREFIX + '-dev'
+                    CHARTNAME_FINAL = CHARTNAME_PREFIX + '-dev'
+                    BUILD_IMAGE_NAME = OS_PROJECT_FINAL + '/' + IMAGE_NAME + ':' + DEVELOP_IMAGE_TAG
+                    DEPLOY_IMAGE_TAG = DEVELOP_IMAGE_TAG
+                    DEPLOY_IMAGE_NAME = BUILD_IMAGE_NAME
+
                 } else if (env.BRANCH_NAME == 'feature'){
                     echo 'Execute on Feature'
-                    OS_PROJECT_NAME = OS_PROJECT_PREFIX + '-stg'
+                    OS_PROJECT_FINAL = OS_PROJECT_PREFIX + '-stg'
+                    CHARTNAME_FINAL = CHARTNAME_PREFIX + '-stg'
+                    DEPLOY_IMAGE_TAG = FEATURE_IMAGE_TAG
+                    BUILD_IMAGE_NAME = OS_PROJECT_FINAL + '/' + IMAGE_NAME + ':' + FEATURE_IMAGE_TAG
+                    DEPLOY_IMAGE_NAME = BUILD_IMAGE_NAME
+
                 } else if (env.BRANCH_NAME.contains(TAG_FILTER) && COMMIT_HEAD_TAG.contains(TAG_FILTER)){
                     echo 'Execute on specific "Release" Tag of:' + TAG_FILTER
-                    OS_PROJECT_NAME = OS_PROJECT_PREFIX + '-uat'
+                    OS_PROJECT_FINAL = OS_PROJECT_PREFIX + '-uat'
+                    CHARTNAME_FINAL = CHARTNAME_PREFIX + '-uat'
+                    BUILD_IMAGE_NAME = OS_PROJECT_FINAL + '/' + IMAGE_NAME + ':' + RELEASE_IMAGE_TAG
+                    DEPLOY_IMAGE_TAG = COMMIT_HEAD_TAG
+                    DEPLOY_IMAGE_NAME = OS_PROJECT_FINAL + '/' + IMAGE_NAME + ':' + COMMIT_HEAD_TAG
+
                 }
                 else {
                     echo 'Non Branch or Tag execution.'
                     echo 'Head Tag:' + COMMIT_HEAD_TAG
                     echo 'Branch Name:' + env.BRANCH_NAME
                 }
-                echo 'OpenShift Project Name: ' + OS_PROJECT_NAME
+                echo 'OpenShift Project Name: ' + OS_PROJECT_FINAL
             }
         }
         stage('Unit Test') {
@@ -73,6 +96,21 @@ podTemplate(
                 } else if (env.BRANCH_NAME.contains(TAG_FILTER) && COMMIT_HEAD_TAG.contains(TAG_FILTER)){
                     echo 'Execute Unit Tests'
                     echo 'ruby -v'
+                    /*
+                    withCredentials([string(credentialsId: 'psd-rails-master-key', variable: 'RAILS_MASTER_KEY')]) {
+                        container('ruby') {
+                          sh """
+                            bundle install
+                    printenv
+                            rake db:create RAILS_ENV=test
+                            rake db:migrate RAILS_ENV=test
+                    printenv
+                            RAILS_MASTER_KEY=${RAILS_MASTER_KEY} rake db:test:prepare
+                            RAILS_MASTER_KEY=${RAILS_MASTER_KEY} rspec
+                            """
+                        }
+                    }
+                    */
                 }
                 else {
                     echo 'No Unit Test'
@@ -113,7 +151,7 @@ podTemplate(
             ]) {
             container('jnlp') {
                 sh """
-                oc project ${OS_PROJECT_NAME}
+                oc project ${OS_PROJECT_FINAL}
                 oc delete secret "bt-helpline-secret-rails"
                 oc create secret generic bt-helpline-secret-rails --from-literal=RAILS_MASTER_KEY="${RAILS_MASTER_KEY}"
                 oc delete secret "bt-helpline-secret"
@@ -134,7 +172,6 @@ podTemplate(
                     echo 'Build on Develop'
                     //Builds as :test or :develop
                     echo 'Image Tag:' + DEVELOP_IMAGE_TAG
-                    BUILD_IMAGE_NAME = OS_PROJECT_NAME + '/' + APPLICATION_NAME + ':' + DEVELOP_IMAGE_TAG
                     echo 'Full Image Name:' + BUILD_IMAGE_NAME
 
                     /* Real Code Below
@@ -142,27 +179,20 @@ podTemplate(
                     oc start-build "helpline-build" --from-repo="." --wait=true --follow
                     */
                     sh 'oc whoami'
-                    DEPLOY_IMAGE_NAME = BUILD_IMAGE_NAME
-
-
                 } else if (env.BRANCH_NAME == 'feature'){
                     echo 'Build on Feature'
                     //Builds as :feature or :stage
                     echo 'Image Tag:' + FEATURE_IMAGE_TAG
-                    BUILD_IMAGE_NAME = OS_PROJECT_NAME + '/' + APPLICATION_NAME + ':' + FEATURE_IMAGE_TAG
                     echo 'Full Image Name: ' + BUILD_IMAGE_NAME
                     /* Real Code Below
                     // Image tag for "build" will already be set in BuildConfig
                     oc start-build "helpline-build" --from-repo="." --wait=true --follow
                     */
                     sh 'oc whoami'
-                    DEPLOY_IMAGE_NAME = BUILD_IMAGE_NAME
-
                 } else if (env.BRANCH_NAME.contains(TAG_FILTER) && COMMIT_HEAD_TAG.contains(TAG_FILTER)){
                     echo 'Build on Release'
                     //Builds as :gittag (e.g. COMMIT_HEAD_TAG)
                     echo 'Image Tag:' + RELEASE_IMAGE_TAG
-                    BUILD_IMAGE_NAME = OS_PROJECT_NAME + '/' + APPLICATION_NAME + ':' + RELEASE_IMAGE_TAG
                     echo 'Full Image Name: ' + BUILD_IMAGE_NAME
                     /* Real Code Below
                     // Image tag for "build" will already be set in BuildConfig
@@ -172,7 +202,7 @@ podTemplate(
 
                     //Tag as :release also
                     echo 'Tag Image as COMMIT_HEAD_TAG also'
-                    echo 'Deploy Image Name (Different than Build): ' + OS_PROJECT_NAME + '/' + APPLICATION_NAME + ':' + COMMIT_HEAD_TAG 
+                    echo 'Deploy Image Name (Different than Build): ' + OS_PROJECT_FINAL + '/' + IMAGE_NAME + ':' + COMMIT_HEAD_TAG 
 
                     //If we want to "build" as GitTag, we'll need to create a new Build-Config each time, with that GitTag version. Not sure it makes difference. Future idea?
                 }
@@ -187,25 +217,37 @@ podTemplate(
             container('helm') {
                 if (env.BRANCH_NAME == 'master') {
                     echo 'Master Deploy'
+                    
 
                 } else if (env.BRANCH_NAME == 'develop'){
-                    DEPLOY_IMAGE_NAME = OS_PROJECT_NAME + '/' + APPLICATION_NAME + ':' + FEATURE_IMAGE_TAG
-
                     echo 'Develop Deploy'
+
+                    /* Real Code Below
+
+                    sh """
+                    helm version --tiller-namespace ocp-tiller
+                    helm upgrade --install helpline-tst helm/helpline /
+                    --namespace ${OS_PROJECT_FINAL} /
+                    --tiller-namespace ${TILLER_NAMESPACE} /
+                    -f values-dev.yaml /
+                    --set image.apiTag=${DEPLOY_IMAGE_TAG}
+                    """
+                    */
+
                     //Deploy with :test
                     echo 'Image Deployed With:' + DEPLOY_IMAGE_NAME
                     sh 'helm --help'
                 } else if (env.BRANCH_NAME == 'feature'){
                     //Deploy with :feature
                     echo 'Release Deploy'
-                    DEPLOY_IMAGE_NAME = OS_PROJECT_NAME + '/' + APPLICATION_NAME + ':' + FEATURE_IMAGE_TAG
+                    DEPLOY_IMAGE_NAME = OS_PROJECT_FINAL + '/' + IMAGE_NAME + ':' + FEATURE_IMAGE_TAG
 
                     echo 'Image Deployed With:' + DEPLOY_IMAGE_NAME
                     sh 'helm --help'
                 } else if (env.BRANCH_NAME.contains(TAG_FILTER) && COMMIT_HEAD_TAG.contains(TAG_FILTER)){
                     echo 'Deploy with GitTag'
                     //Could always simplify and deploy (via helm) with :release. 
-                    DEPLOY_IMAGE_NAME = OS_PROJECT_NAME + '/' + APPLICATION_NAME + ':' + COMMIT_HEAD_TAG
+                    DEPLOY_IMAGE_NAME = OS_PROJECT_FINAL + '/' + IMAGE_NAME + ':' + COMMIT_HEAD_TAG
 
                     echo 'Image Deployed With:' + DEPLOY_IMAGE_NAME
                     sh 'helm --help'
@@ -214,6 +256,8 @@ podTemplate(
                     echo 'Head Tag:' + COMMIT_HEAD_TAG
                     echo 'Branch Name:' + env.BRANCH_NAME
                 }
+
+                //Deploy
             }
         }
         
