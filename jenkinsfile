@@ -253,9 +253,9 @@ podTemplate(
                         oc create secret generic bt-helpline-secret --from-literal=database-password="${DATABASE_PWD}" --from-literal=keybase="${KEYBASE}"
                         """
                     }
-            
-            }
             */
+            }
+            
             stage('Build Image') {
                 if (env.BRANCH_NAME == 'master') {
                     echo 'No Build'
