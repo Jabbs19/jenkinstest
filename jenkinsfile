@@ -1,7 +1,12 @@
 def label = "jenkins-slave-${UUID.randomUUID().toString()}"
+def OS_PROJECT_PREFIX = "psd-helpline"
+def OS_PROJECT_NAME = ""
 def COMMIT_HEAD_TAG = ""
+
+def APPLICATION_NAME = 'helpline'
 def DEVELOP_IMAGE_TAG = "test"
 def RELEASE_IMAGE_TAG = "release"
+def FULL_IMAGE_NAME = ""
 def TAG_FILTER="prod"
 
 podTemplate(
@@ -36,18 +41,23 @@ podTemplate(
                 echo 'Check Branch:'
                 if (env.BRANCH_NAME == 'master') {
                     echo 'Executing on Master'
+                    OS_PROJECT_NAME = OS_PROJECT_PREFIX + '-prd'
                 } else if (env.BRANCH_NAME == 'develop'){
                     echo 'Execute on Develop'
-                } else if (env.BRANCH_NAME == 'release'){
-                    echo 'Execute on Release'
+                    OS_PROJECT_NAME = OS_PROJECT_PREFIX + '-dev'
+                } else if (env.BRANCH_NAME == 'feature'){
+                    echo 'Execute on Feature'
+                    OS_PROJECT_NAME = OS_PROJECT_PREFIX + '-stg'
                 } else if (env.BRANCH_NAME.contains(TAG_FILTER) && COMMIT_HEAD_TAG.contains(TAG_FILTER)){
-                    echo 'Execute on "prod" specific tag.'
+                    echo 'Execute on specific "Release" Tag of:' + TAG_FILTER
+                    OS_PROJECT_NAME = OS_PROJECT_PREFIX + '-uat'
                 }
                 else {
                     echo 'Non Branch or Tag execution.'
                     echo 'Head Tag:' + COMMIT_HEAD_TAG
                     echo 'Branch Name:' + env.BRANCH_NAME
                 }
+                echo 'OpenShift Project Name: ' + OS_PROJECT_NAME
             }
         }
         stage('Unit Test') {
@@ -56,11 +66,11 @@ podTemplate(
                     echo 'No Unit Test'
                 } else if (env.BRANCH_NAME == 'develop'){
                     echo 'No Unit Test'
-                } else if (env.BRANCH_NAME == 'release'){
-                    echo 'Execute Unit Tests'
-                    sh 'ruby -v'
-                } else if (env.BRANCH_NAME.contains(TAG_FILTER) && COMMIT_HEAD_TAG.contains(TAG_FILTER)){
+                } else if (env.BRANCH_NAME == 'feature'){
                     echo 'No Unit Test'
+                } else if (env.BRANCH_NAME.contains(TAG_FILTER) && COMMIT_HEAD_TAG.contains(TAG_FILTER)){
+                    echo 'Execute Unit Tests'
+                    echo 'ruby -v'
                 }
                 else {
                     echo 'No Unit Test'
@@ -75,10 +85,10 @@ podTemplate(
                     echo 'No Checkmarx'
                 } else if (env.BRANCH_NAME == 'develop'){
                     echo 'No Checkmarx'
-                } else if (env.BRANCH_NAME == 'release'){
-                    echo 'Execute Checkmarx'
-                } else if (env.BRANCH_NAME.contains(TAG_FILTER) && COMMIT_HEAD_TAG.contains(TAG_FILTER)){
+                } else if (env.BRANCH_NAME == 'feature'){
                     echo 'No Checkmarx'
+                } else if (env.BRANCH_NAME.contains(TAG_FILTER) && COMMIT_HEAD_TAG.contains(TAG_FILTER)){
+                    echo 'Execute Checkmarx'
                 }
                 else {
                     echo 'No Checkmarx'
@@ -99,14 +109,28 @@ podTemplate(
                     echo 'No Build'
                 } else if (env.BRANCH_NAME == 'develop'){
                     echo 'Build on Develop'
+                    //Builds as :test or :develop
                     echo 'Image Tag:' + DEVELOP_IMAGE_TAG
+                    FULL_IMAGE_NAME = OS_PROJECT_NAME + '/' + APPLICATION_NAME + ':' + DEVELOP_IMAGE_TAG
+                    echo FULL_IMAGE_NAME
                     sh 'oc whoami'
-                } else if (env.BRANCH_NAME == 'release'){
-                    echo 'Build on Release'
+                } else if (env.BRANCH_NAME == 'feature'){
+                    echo 'Build on Feature'
+                    //Builds as :feature or :stage
                     echo 'Image Tag:' + RELEASE_IMAGE_TAG
+                    FULL_IMAGE_NAME = OS_PROJECT_NAME + '/' + APPLICATION_NAME + ':' + RELEASE_IMAGE_TAG
+                    echo FULL_IMAGE_NAME
                     sh 'oc whoami'
-                } else if (env.BRANCH_NAME.contains('prod') && COMMIT_HEAD_TAG.contains('prod')){
-                    echo 'No Build'
+                } else if (env.BRANCH_NAME.contains(TAG_FILTER) && COMMIT_HEAD_TAG.contains(TAG_FILTER)){
+                    echo 'Build on Release'
+                    //Builds as :gittag (e.g. COMMIT_HEAD_TAG)
+                    echo 'Image Tag:' + COMMIT_HEAD_TAG
+                    FULL_IMAGE_NAME = OS_PROJECT_NAME + '/' + APPLICATION_NAME + ':' + COMMIT_HEAD_TAG
+                    echo FULL_IMAGE_NAME
+                    sh 'oc whoami'
+
+                    //Tag as :release also
+                    echo 'Tag Image as :release also'
                 }
                 else {
                     echo 'No Build. Should we name feature, or leave open?'
@@ -129,7 +153,7 @@ podTemplate(
                     echo 'Release Deploy'
                     echo 'Image Tag:' + RELEASE_IMAGE_TAG
                     sh 'helm --help'
-                } else if (env.BRANCH_NAME.contains('prod') && COMMIT_HEAD_TAG.contains('prod')){
+                } else if (env.BRANCH_NAME.contains(TAG_FILTER) && COMMIT_HEAD_TAG.contains(TAG_FILTER)){
                     echo 'Deploy on GitTag'
                     echo 'Image Tag:' + COMMIT_HEAD_TAG
                     sh 'helm --help'
