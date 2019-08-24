@@ -34,9 +34,16 @@ podTemplate(
                 def HEAD_TAG = sh(returnStdout: true, script: "git tag -l --contains HEAD").trim()
                 echo 'Head Tag:'
                 echo HEAD_TAG
+                try {
                 def MASTER_TAG = sh(returnStdout: true, script: "git tag -l --points-at=master").trim()
                 echo 'Master Tag:'
                 echo MASTER_TAG
+                } catch (e) {
+                }
+                finally {
+                }
+
+               
 
 
             }
