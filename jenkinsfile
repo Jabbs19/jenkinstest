@@ -216,10 +216,18 @@ podTemplate(
         stage('Deploy Image') {
             container('helm') {
                 if (env.BRANCH_NAME == 'master') {
+                    stage('Build and Package Helm') {
+                        echo 'Build and Package'
+
+                    }
                     echo 'Master Deploy'
-                    
+
 
                 } else if (env.BRANCH_NAME == 'develop'){
+                    stage('Build and Package Helm') {
+                        echo 'Build and Package'
+
+                    }
                     echo 'Develop Deploy'
 
                     /* Real Code Below
