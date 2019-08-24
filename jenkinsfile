@@ -217,8 +217,9 @@ podTemplate(
                 }
             }
         }
-        /*
+        
         container('openshift') {
+            /*
             stage('Create Secrets') {
                 if (env.BRANCH_NAME == 'master') {
                     echo '1. Delete All Secrets in PRD. 2. Create Application Secrets in PRD.'
