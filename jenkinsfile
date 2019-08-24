@@ -1,6 +1,5 @@
 def label = "jenkins-slave-${UUID.randomUUID().toString()}"
-//def TAIL_TAG = ""
-//def HEAD_TAG = ""
+def COMMIT_HEAD_TAG = ""
 
 podTemplate(
     label: label,
@@ -28,43 +27,23 @@ podTemplate(
         stage('Checkout') {
             container('jnlp') {
                 checkout scm
-                def TAIL_TAG = sh(returnStdout: true, script: "git tag --sort version:refname | tail -1").trim()
-                echo 'Tail Tag:'
-                echo TAIL_TAG
-                def COMMIT_HEAD_TAG = sh(returnStdout: true, script: "git tag -l --points-at HEAD | tail -1").trim()
-                echo 'Head Tag:'
-                echo COMMIT_HEAD_TAG
+                COMMIT_HEAD_TAG = sh(returnStdout: true, script: "git tag -l --points-at HEAD | tail -1").trim()
+                echo 'Head Tag:' + COMMIT_HEAD_TAG
+                echo 'Branch Name:' + env.BRANCH_NAME
+                echo 'Check Branch:'
                 if (env.BRANCH_NAME == 'master') {
                     echo 'Executing on Master'
-                    echo 'Head Tag:'    
-                    echo COMMIT_HEAD_TAG
-                    echo 'Env:'
-                    echo env.BRANCH_NAME
                 } else if (env.BRANCH_NAME == 'develop'){
                     echo 'Execute on Develop'
-                    echo 'Head Tag:'    
-                    echo COMMIT_HEAD_TAG
-                    echo 'Env:'
-                    echo env.BRANCH_NAME
                 } else if (env.BRANCH_NAME == 'release'){
                     echo 'Execute on Release'
-                    echo 'Head Tag:'    
-                    echo COMMIT_HEAD_TAG
-                    echo 'Env:'
-                    echo env.BRANCH_NAME
                 } else if (env.BRANCH_NAME.contains('prod') && COMMIT_HEAD_TAG.contains('prod')){
                     echo 'Execute on "prod" specific tag.'
-                    echo 'Head Tag:'    
-                    echo COMMIT_HEAD_TAG
-                    echo 'Env:'
-                    echo env.BRANCH_NAME
                 }
                 else {
                     echo 'Non Branch or Tag execution.'
-                    echo 'Head Tag:'    
-                    echo COMMIT_HEAD_TAG
-                    echo 'Env:'
-                    echo env.BRANCH_NAME
+                    echo 'Head Tag:' + COMMIT_HEAD_TAG
+                    echo 'Branch Name:' + env.BRANCH_NAME
                 }
                 // try {
                 // def MASTER_TAG = sh(returnStdout: true, script: "git tag -l --points-at=master").trim()
