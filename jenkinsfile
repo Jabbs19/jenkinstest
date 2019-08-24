@@ -31,9 +31,9 @@ podTemplate(
                 def TAIL_TAG = sh(returnStdout: true, script: "git tag --sort version:refname | tail -1").trim()
                 echo 'Tail Tag:'
                 echo TAIL_TAG
-                def HEAD_TAG = sh(returnStdout: true, script: "git tag -l --contains HEAD").trim()
+                def COMMIT_HEAD_TAG = sh(returnStdout: true, script: "git tag -l --points-at HEAD | tail -1").trim()
                 echo 'Head Tag:'
-                echo HEAD_TAG
+                echo COMMIT_HEAD_TAG
                 // try {
                 // def MASTER_TAG = sh(returnStdout: true, script: "git tag -l --points-at=master").trim()
                 // echo 'Master Tag:'
