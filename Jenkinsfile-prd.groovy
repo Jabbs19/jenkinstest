@@ -40,7 +40,7 @@ podTemplate(
                     echo 'Execute on Develop'
                 } else if (env.BRANCH_NAME == 'release'){
                     echo 'Execute on Release'
-                } else if (env.BRANCH_NAME.contains(TAG_FILTER) && COMMIT_HEAD_TAG.contains('prod')){
+                } else if (env.BRANCH_NAME.contains(TAG_FILTER) && COMMIT_HEAD_TAG.contains(TAG_FILTER)){
                     echo 'Execute on "prod" specific tag.'
                 }
                 else {
@@ -59,7 +59,7 @@ podTemplate(
                 } else if (env.BRANCH_NAME == 'release'){
                     echo 'Execute Unit Tests'
                     sh 'ruby -v'
-                } else if (env.BRANCH_NAME.contains('prod') && COMMIT_HEAD_TAG.contains('prod')){
+                } else if (env.BRANCH_NAME.contains(TAG_FILTER) && COMMIT_HEAD_TAG.contains(TAG_FILTER)){
                     echo 'No Unit Test'
                 }
                 else {
@@ -77,7 +77,7 @@ podTemplate(
                     echo 'No Checkmarx'
                 } else if (env.BRANCH_NAME == 'release'){
                     echo 'Execute Checkmarx'
-                } else if (env.BRANCH_NAME.contains('prod') && COMMIT_HEAD_TAG.contains('prod')){
+                } else if (env.BRANCH_NAME.contains(TAG_FILTER) && COMMIT_HEAD_TAG.contains(TAG_FILTER)){
                     echo 'No Checkmarx'
                 }
                 else {
