@@ -29,7 +29,7 @@ def TAG_FILTER="prod-"
 def HOTFIX_TAG_FILTER = "hotfix-"
 
 //Image Variables
-def IMAGE_NAME = 'helpline'
+def IMAGE_NAME = "helpline"
 
 //Helm and Tiller Stuff
 def TILLER_NAMESPACE = 'ocp-tiller'
@@ -99,7 +99,7 @@ podTemplate(
                         } else if (COMMIT_HEAD_TAG.substring(0,HOTFIX_TAG_FILTER.length()) == HOTFIX_TAG_FILTER) {
                             APP_VERSION = COMMIT_HEAD_TAG.substring(HOTFIX_TAG_FILTER.length(),COMMIT_HEAD_TAG.length())
                         } else {
-                            APP_VERSION = "COMMIT_HEAD_TAG"
+                            APP_VERSION = COMMIT_HEAD_TAG
                         }
                     }
                     echo 'App Version: ' + APP_VERSION
@@ -217,6 +217,7 @@ podTemplate(
                 }
             }
         }
+        /*
         container('openshift') {
             stage('Create Secrets') {
                 if (env.BRANCH_NAME == 'master') {
@@ -252,8 +253,9 @@ podTemplate(
                 oc create secret generic bt-helpline-secret --from-literal=database-password="${DATABASE_PWD}" --from-literal=keybase="${KEYBASE}"
                 """
             }
-            */
+            
             }
+            */
             stage('Build Image') {
                 if (env.BRANCH_NAME == 'master') {
                     echo 'No Build'
@@ -320,7 +322,7 @@ podTemplate(
                 }
             }
             stage ('Secrets Cleanup') {
-                echo 'Delete any secrets that are not needed (maybe build secrets?)'
+                echo 'Delete any secrets that are not needed (maybe build secrets)'
 
             }
         }
@@ -378,7 +380,7 @@ podTemplate(
                 }
                 stage ('Deploy with Helm') {
                     //Could make this a "configuration step, and just set all remaining values before a global "deploy"
-                    if (env.BRANCH_NAME == 'master' ){
+                    if (env.BRANCH_NAME == 'master'){
                         //Set Full path of TGZ
                         //def TGZ_PATH = TGZ_DEST_DIR + '/' + PACKAGE_NAME 
                         
