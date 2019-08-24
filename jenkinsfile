@@ -191,7 +191,7 @@ podTemplate(
                     */
                 } else if (env.BRANCH_NAME.contains(HOTFIX_TAG_FILTER) && COMMIT_HEAD_TAG.contains(HOTFIX_TAG_FILTER)){
                     echo 'No Unit Test'
-                { else {
+                } else {
                     echo 'No Unit Test'
                     echo 'Head Tag:' + COMMIT_HEAD_TAG
                     echo 'Branch Name:' + env.BRANCH_NAME
