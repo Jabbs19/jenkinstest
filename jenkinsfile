@@ -468,8 +468,8 @@ podTemplate(
                         --namespace ${DEPLOY_OS_PROJECT} \
                         --tiller-namespace ${HELM_TILLER_NAMESPACE} \
                         -f ${HELM_YAML_LOCATION_FINAL} \
-                        --set image.apiRepository=${DEPLOY_OS_PROJECT} \
-                        --set image.apiTag=${DEPLOY_IMAGE_TAG} \
+                        --set images.apiRepository=${DEPLOY_OS_PROJECT} \
+                        --set images.apiTag=${DEPLOY_IMAGE_TAG} \
                         '
                         """
                     }
