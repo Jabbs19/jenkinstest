@@ -25,8 +25,8 @@ def HOTFIX_IMAGE_TAG = "hotfix"
 //Uses same helm as PRD.
 
 //Git Variables
-def TAG_FILTER="mark-"
-def HOTFIX_TAG_FILTER = "hf-mark"
+def TAG_FILTER="release-m"
+def HOTFIX_TAG_FILTER = "hotfix-m"
 
 //Image Variables
 def IMAGE_NAME = "helpline"
@@ -141,7 +141,7 @@ podTemplate(
                     OS_BUILD_PROJECT = OS_REL_PROJECT
                     BUILD_IMAGE_TAG = HOTFIX_IMAGE_TAG
                     BUILD_IMAGE_NAME = OS_BUILD_PROJECT + '/' + IMAGE_NAME + ':' + BUILD_IMAGE_TAG
-                    OS_DEPLOY_PROJECT = OS_PRD_PROJECT
+                    OS_DEPLOY_PROJECT = OS_PRD_PROJECT //Could deploy to Release or other project.
                     DEPLOY_IMAGE_TAG = APP_VERSION
                     DEPLOY_IMAGE_NAME = OS_DEPLOY_PROJECT + '/' + IMAGE_NAME + ':' + DEPLOY_IMAGE_TAG
                     VALUES_YAML_FINAL = PRD_HELM_VALUES_LOC
@@ -336,7 +336,7 @@ podTemplate(
                     echo 'Run Helm Lint Test'
                     //sh 'helm lint ${CHART_LOCATION}'
                 }
-                if (env.BRANCH_NAME == 'master' || (env.BRANCH_NAME.contains(HOTFIX_TAG_FILTER) && COMMIT_HEAD_TAG.contains(HOTFIX_TAG_FILTER))){
+                if (env.BRANCH_NAME == 'master' ){
                     stage('Get Chartname') {
                         // Read from Chart values.  Get chartVersion
                         //def chartYaml = readYaml file: 'helm/helpline/Chart.yaml'
@@ -399,24 +399,9 @@ podTemplate(
                         echo 'Deploy Production with helm to ' + OS_DEPLOY_PROJECT + ' with tag:' + DEPLOY_IMAGE_NAME
                         sh 'helm --help'
                     } else if (env.BRANCH_NAME.contains(HOTFIX_TAG_FILTER) && COMMIT_HEAD_TAG.contains(HOTFIX_TAG_FILTER)) {
-                        //Currently the same as Master Release, but if we want to do something different with hotfixes, we can do it here.
-                        //Set Full path of TGZ
-                        //def TGZ_PATH = TGZ_DEST_DIR + '/' + PACKAGE_NAME 
+                       
+                        echo 'No deploy for HotFix.'
                         
-                        /* Real Code Below
-                        sh """
-                        helm version --tiller-namespace ${TILLER_NAMESPACE} \
-                        helm upgrade --install ${RELEASE_NAME_FINAL} \
-                        ${TGZ_PATH} \
-                        --namespace ${OS_DEPLOY_PROJECT} \
-                        --tiller-namespace ${TILLER_NAMESPACE} \
-                        -f ${VALUES_YAML_FINAL} \
-                        --set image.apiRepository=${OS_DEPLOY_PROJECT}
-                        --set image.apiTag=${DEPLOY_IMAGE_TAG}
-                        """
-                        */
-                        echo 'Deploy HotFix (Producion) with helm to ' + OS_DEPLOY_PROJECT + ' with tag:' + DEPLOY_IMAGE_NAME
-                        sh 'helm --help'
                     } else if (env.BRANCH_NAME == 'develop' || env.BRANCH_NAME == 'stage' || (env.BRANCH_NAME.contains(TAG_FILTER) && COMMIT_HEAD_TAG.contains(TAG_FILTER))){
                         /* Real Code Below
                         sh """
