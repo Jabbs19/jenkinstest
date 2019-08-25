@@ -478,8 +478,6 @@ podTemplate(
                         --set image.apiTag=${DEPLOY_IMAGE_TAG} \
                         '
                         """
-                        */
-
                         //Deploy with :test
                         echo 'Deploy with helm to ' + DEPLOY_OS_PROJECT + ' with tag:' + DEPLOY_IMAGE_NAME
                         sh 'helm --help'
