@@ -79,7 +79,6 @@ podTemplate(
                 echo 'Commit Head Tag:' + COMMIT_HEAD_TAG
                 echo 'Current Branch Name:' + env.BRANCH_NAME
                 if (COMMIT_HEAD_TAG != "") {
-                        error "No Git Version at Master Head"
                     if (COMMIT_HEAD_TAG.substring(0,TAG_FILTER.length()) == TAG_FILTER) {
                         APP_VERSION = COMMIT_HEAD_TAG.substring(TAG_FILTER.length(),COMMIT_HEAD_TAG.length())
                     } else if (COMMIT_HEAD_TAG.substring(0,HOTFIX_TAG_FILTER.length()) == HOTFIX_TAG_FILTER) {
