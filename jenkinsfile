@@ -370,12 +370,14 @@ podTemplate(
                         // Read from Chart values.  Get chartVersion
                         def chartYaml = readYaml file: 'helm/helpline/Chart.yaml'
                         def chartVersion = chartYaml.version.toString()
+                        def appVersion = chartYaml.appVersion.toString()
                         if (chartVersion == "") {
                             //Failed to parse chartVersion. Helm package will fail.
                             error: chartversion not found
                         }
-                        echo 'Get ChartName from Chart.yaml' + chartVersion
+                        echo 'Get ChartName from Chart.yaml: ' + chartVersion
                     }
+                    
                     stage('Package Helm'){
                         //Pacakge Helm
                         //sh "helm package helm/helpline -d helm"
@@ -388,11 +390,19 @@ podTemplate(
                     }
                     stage('Overwrite values.yaml') {
                     // Read from values.yaml:
-                        //def valuesYaml = readYaml file: 'helm/helpline/values.yaml'
+                        def valuesYaml = readYaml file: 'helm/helpline/values.yaml'
+                        def chartYaml = readYaml file: 'helm/helpline/Chart.yaml'
+
                     // Overwrite the image tag specified in values.yaml.
-                        //valuesYaml.image.tag = 'somevalue'
-                        //sh "rm -f helm/helpline/values.yaml"
-                        //writeYaml file: "helm/helpline/values.yaml", data: valuesYaml
+                        valuesYaml.image.tag = APP_VERSION
+                        chartYaml.appVersion = APP_VERSION
+
+                        sh "rm -f helm/helpline/values.yaml"
+                        sh "rm -f helm/helpline/Chart.yaml"
+
+                        writeYaml file: "helm/helpline/values.yaml", data: valuesYaml
+                        writeYaml file: "helm/helpline/Chart.yaml", data: chartYaml
+
                         echo 'overwrite values.yaml'
                     }
                     stage('Push to ChartMuseum') {
