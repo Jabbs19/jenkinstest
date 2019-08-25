@@ -26,7 +26,7 @@ def HOTFIX_IMAGE_TAG = "hotfix"
 
 //Git Variables
 def TAG_FILTER="mark-"
-def HOTFIX_TAG_FILTER = "mark-hf-"
+def HOTFIX_TAG_FILTER = "hf-mark"
 
 //Image Variables
 def IMAGE_NAME = "helpline"
