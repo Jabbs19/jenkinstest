@@ -93,6 +93,10 @@ podTemplate(
                     }
                     echo 'App Version Parsing Complete (if needed): ' + APP_VERSION
                 }
+                GIT_SHORT_COMMIT = sh(returnStdout: true, script: "git rev-parse --short HEAD | tail -1").trim()
+                if (APP_VERSION == "") {
+                    APP_VERSION = GIT_SHORT_COMMIT
+                }
             }
             stage('Set Branch Variables') {
                 echo 'Set Branch Variables Branch:'
