@@ -394,7 +394,7 @@ podTemplate(
                         def chartYaml = readYaml file: 'helm/helpline/Chart.yaml'
 
                     // Overwrite the image tag specified in values.yaml.
-                        valuesYaml.image.tag = APP_VERSION
+                        valuesYaml.images.apiTag = APP_VERSION
                         chartYaml.appVersion = APP_VERSION
 
                         sh "rm -f helm/helpline/values.yaml"
