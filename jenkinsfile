@@ -52,6 +52,7 @@ def HELM_RELEASE_NAME_FINAL = ""
 def HELM_YAML_LOCATION_FINAL = ""
 def HELM_TGZ_PACKAGE_FINAL = ""
 def APP_VERSION = ""
+def HELM_CHART_VERSION = ""
       //Project that image will be built/tagged to.
 
 podTemplate(
@@ -364,10 +365,10 @@ podTemplate(
                     if (env.BRANCH_NAME == 'develop' || env.BRANCH_NAME == 'stage') {
                         //Just version the appVersion for clarity, no "real" purpose.
                         def chartYaml = readYaml file: 'helm/helpline/Chart.yaml'
-                        def chartVersion = chartYaml.version.toString()
+                        HELM_CHART_VERSION = chartYaml.version.toString()
                         def appVersion = chartYaml.appVersion.toString()
                         chartYaml.appVersion = env.BRANCH_NAME  +'-'+GIT_SHORT_COMMIT
-                        echo 'Current: Chartversion:'+chartVersion+'appVersion:'+appVersion
+                        echo 'Current: HELM_CHART_VERSION:'+HELM_CHART_VERSION+'appVersion:'+appVersion
 
                         sh "rm -f helm/helpline/Chart.yaml"
                         writeYaml file: "helm/helpline/Chart.yaml", data: chartYaml
@@ -377,10 +378,10 @@ podTemplate(
                         def chartYaml = readYaml file: 'helm/helpline/Chart.yaml'
                         def valuesYaml = readYaml file: 'helm/helpline/values.yaml'
 
-                        def chartVersion = chartYaml.version.toString()
+                        HELM_CHART_VERSION = chartYaml.version.toString()
                         def appVersion = chartYaml.appVersion.toString()
                         def currentImage = valuesYaml.images.apiTag.toString()
-                        echo 'Current: Chartversion:'+chartVersion+' appVersion:'+appVersion+' currentImage:'+currentImage
+                        echo 'Current: HELM_CHART_VERSION:'+HELM_CHART_VERSION+' appVersion:'+appVersion+' currentImage:'+currentImage
                         if (APP_VERSION == "") {
                             error 'No Parsed APP_VERSION for deployment.'
                         } else {
@@ -401,10 +402,10 @@ podTemplate(
                         def chartYaml = readYaml file: 'helm/helpline/Chart.yaml'
                         def valuesYaml = readYaml file: 'helm/helpline/values.yaml'
 
-                        def chartVersion = chartYaml.version.toString()
+                        HELM_CHART_VERSION = chartYaml.version.toString()
                         def appVersion = chartYaml.appVersion.toString()
                         def currentImage = valuesYaml.images.apiTag.toString()
-                        echo 'Current: Chartversion:'+chartVersion+' appVersion:'+appVersion+' currentImage:'+currentImage
+                        echo 'Current: HELM_CHART_VERSION:'+HELM_CHART_VERSION+' appVersion:'+appVersion+' currentImage:'+currentImage
                         if (APP_VERSION == "") {
                             error 'No Parsed APP_VERSION for deployment.'
                         } else {
@@ -424,7 +425,7 @@ podTemplate(
                         sh """
                         echo "helm package ${HELM_CHART_LOCATION} -d ${HELM_TGZ_DEST_DIR}"
                         """
-                        HELM_TGZ_PACKAGE_FINAL = HELM_CHARTNAME + '-' + chartVersion + '.tgz'
+                        HELM_TGZ_PACKAGE_FINAL = HELM_CHARTNAME + '-' + HELM_CHART_VERSION + '.tgz'
                         echo 'Helm .tgz Package: ' + HELM_TGZ_PACKAGE_FINAL
 
                         sh """
