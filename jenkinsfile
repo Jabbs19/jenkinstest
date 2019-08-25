@@ -78,14 +78,17 @@ podTemplate(
                 COMMIT_HEAD_TAG = sh(returnStdout: true, script: "git tag -l --points-at HEAD | tail -1").trim()
                 echo 'Commit Head Tag:' + COMMIT_HEAD_TAG
                 echo 'Current Branch Name:' + env.BRANCH_NAME
-                if (COMMIT_HEAD_TAG.substring(0,TAG_FILTER.length()) == TAG_FILTER) {
-                    APP_VERSION = COMMIT_HEAD_TAG.substring(TAG_FILTER.length(),COMMIT_HEAD_TAG.length())
-                } else if (COMMIT_HEAD_TAG.substring(0,HOTFIX_TAG_FILTER.length()) == HOTFIX_TAG_FILTER) {
-                    APP_VERSION = COMMIT_HEAD_TAG.substring(HOTFIX_TAG_FILTER.length(),COMMIT_HEAD_TAG.length())
-                } else {
-                    APP_VERSION = ""
+                if (COMMIT_HEAD_TAG != "") {
+                        error "No Git Version at Master Head"
+                    if (COMMIT_HEAD_TAG.substring(0,TAG_FILTER.length()) == TAG_FILTER) {
+                        APP_VERSION = COMMIT_HEAD_TAG.substring(TAG_FILTER.length(),COMMIT_HEAD_TAG.length())
+                    } else if (COMMIT_HEAD_TAG.substring(0,HOTFIX_TAG_FILTER.length()) == HOTFIX_TAG_FILTER) {
+                        APP_VERSION = COMMIT_HEAD_TAG.substring(HOTFIX_TAG_FILTER.length(),COMMIT_HEAD_TAG.length())
+                    } else {
+                        APP_VERSION = ""
+                    }
+                    echo 'App Version: ' + APP_VERSION
                 }
-                echo 'App Version: ' + APP_VERSION
             }
             stage('Set Branch Variables') {
                 echo 'Set Branch Variables Branch:'
