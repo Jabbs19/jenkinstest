@@ -406,10 +406,23 @@ podTemplate(
                         //sh """
                         //echo "Package Name: ${PACKAGE_NAME}"
                         //"""
-                        echo 'Package helm into .tgz'
+                        echo 'Check of new Yamls: '
+                        def chartYaml = readYaml file: 'helm/helpline/Chart.yaml'
+                        def valuesYaml = readYaml file: 'helm/helpline/values.yaml'
+
+                        def chartVersion = chartYaml.version.toString()
+                        def appVersion = chartYaml.appVersion.toString()
+                        def currentImage = valuesYaml.images.apiTag.toString()
+
+                        if (chartVersion == "") {
+                            //Failed to parse chartVersion. Helm package will fail.
+                            error: chartversion not found
+                        }
                         echo 'Current Chart Version: ' + chartVersion
                         echo 'Current App Version: ' + appVersion
                         echo 'Current Image Tag: ' + currentImage
+
+                        echo 'Package helm into .tgz'
                     }
                     stage('Overwrite values.yaml') {
                     
