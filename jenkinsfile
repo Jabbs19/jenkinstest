@@ -311,9 +311,10 @@ podTemplate(
             }
 
             stage('Build Image') {
-                if (env.BRANCH_NAME == 'master') {
-                    echo 'No Build'
-                } else if (env.BRANCH_NAME == 'develop'){
+                if (env.BRANCH_NAME == 'develop' || env.BRANCH_NAME == 'stage' \
+                    || (env.BRANCH_NAME.contains(TAG_FILTER) && COMMIT_HEAD_TAG.contains(TAG_FILTER)) \
+                    || (env.BRANCH_NAME.contains(HOTFIX_TAG_FILTER) && COMMIT_HEAD_TAG.contains(HOTFIX_TAG_FILTER)) \
+                   ) {
                     echo 'Build on Develop'
                     echo 'Full Image Name:' + BUILD_IMAGE_NAME
 
@@ -323,56 +324,13 @@ podTemplate(
                     echo 'oc start-build "helpline-build" --from-repo="." --wait=true --follow -n ${OS_BUILD_PROJECT}'
                     """
 
-                } else if (env.BRANCH_NAME == 'stage'){
-                    echo 'Build on Feature'
-                    //Builds as :feature or :stage
-                    echo 'Image Tag:' + BUILD_IMAGE_TAG
-                    echo 'Full Image Name: ' + BUILD_IMAGE_NAME
-                    /* Real Code Below
-                    // Image tag for "build" will already be set in BuildConfig
-                    oc start-build "helpline-build" --from-repo="." --wait=true --follow -n ${OS_BUILD_PROJECT}
-                    */
-                    sh 'oc whoami'
-                } else if (env.BRANCH_NAME.contains(TAG_FILTER) && COMMIT_HEAD_TAG.contains(TAG_FILTER)){
-                    echo 'Build on Release'
-                    //Builds as :release 
-                    echo 'Image Tag:' + BUILD_IMAGE_TAG
-                    echo 'Full Image Name: ' + BUILD_IMAGE_NAME
-                    /* Real Code Below
-                    // Image tag for "build" will already be set in BuildConfig
-                    oc start-build "helpline-build" --from-repo="." --wait=true --follow -n ${OS_BUILD_PROJECT}
-                    */
-                    sh 'oc whoami'
+                } 
+            }
+            stage('Tags') {
+                echo 'Tag Image as COMMIT_HEAD_TAG also'
+                sh "echo 'oc tag ${BUILD_IMAGE_NAME} ${DEPLOY_IMAGE_NAME}'"
+                echo 'Deploy Image Name (Different than Build): ' + DEPLOY_IMAGE_NAME
 
-                    //Tag as :gittag for deployment
-                    echo 'Tag Image as COMMIT_HEAD_TAG also'
-                    sh "echo 'oc tag ${BUILD_IMAGE_NAME} ${DEPLOY_IMAGE_NAME}'"
-                    echo 'Deploy Image Name (Different than Build): ' + DEPLOY_IMAGE_NAME
-
-                    //If we want to "build" as GitTag, we'll need to create a new Build-Config each time, with that GitTag version. Not sure it makes difference. Future idea?
-                } else if (env.BRANCH_NAME.contains(HOTFIX_TAG_FILTER) && COMMIT_HEAD_TAG.contains(HOTFIX_TAG_FILTER)){
-                    echo 'Build on HotFix'
-                    //Builds as :hotfix 
-                    echo 'Image Tag:' + BUILD_IMAGE_TAG
-                    //Will need to either create a build-config on the fly, or create one ahead of time specifically for hotfix.
-                    echo 'Full Image Name: ' + BUILD_IMAGE_NAME
-                    /* Real Code Below
-                    // Image tag for "build" will already be set in BuildConfig
-                    oc start-build "helpline-build-hotfix" --from-repo="." --wait=true --follow -n ${OS_BUILD_PROJECT}
-                    */
-                    sh 'oc whoami'
-
-                    //Tag as :gittag for deployment
-                    echo 'Tag Image as Hot Fix App Version also'
-                    sh "echo 'oc tag ${BUILD_IMAGE_NAME} ${DEPLOY_IMAGE_NAME}'"
-                    echo 'No Deployment to Release environment, just a build of image.'
-
-                    //If we want to "build" as GitTag, we'll need to create a new Build-Config each time, with that GitTag version. Not sure it makes difference. Future idea?
-                } else {
-                    echo 'No Build.'
-                    echo 'Head Tag:' + COMMIT_HEAD_TAG
-                    echo 'Branch Name:' + env.BRANCH_NAME
-                }
             }
             stage ('Secrets Cleanup') {
                 echo 'Delete any secrets that are not needed (maybe build secrets)'
