@@ -337,23 +337,15 @@ podTemplate(
             stage('Image Management') {
                 if ((env.BRANCH_NAME.contains(TAG_FILTER) && COMMIT_HEAD_TAG.contains(TAG_FILTER)) \
                     || (env.BRANCH_NAME.contains(HOTFIX_TAG_FILTER) && COMMIT_HEAD_TAG.contains(HOTFIX_TAG_FILTER))) {
-                echo 'Tag Image as ' + SECONDARY_TAG_FINAL + 'also'
-                sh "echo 'oc tag ${IMAGE_BUILD_FULL_NAME} ${SECONDARY_TAG_FINAL}"
+                    echo 'Tag Image as ' + SECONDARY_TAG_FINAL + 'also'
+                    // This is already set in the beginning configuration section, but could be done here.
+                    //SECONDARY_TAG_FINAL = REL_OS_PROJECT + '/' + IMAGE_NAME + ':' + APP_VERSION
+                    sh "echo 'oc tag ${IMAGE_BUILD_FULL_NAME} ${SECONDARY_TAG_FINAL}'"
                 } else if (env.BRANCH_NAME == 'master') {
-                sh "echo 'oc tag psd-helpline-rel/helpline:gittag psd-helpline-prd/helpline:gittag"
-
-
+                    // This is already set in the beginning configuration section, but could be done here.
+                    //SECONDARY_TAG_FINAL = PRD_OS_PROJECT + '/' + IMAGE_NAME + ':' + APP_VERSION
+                    sh "echo 'oc tag ${IMAGE_BUILD_FULL_NAME} ${SECONDARY_TAG_FINAL}'"
                 }
-                //Release
-                sh "echo 'oc tag psd-helpline-rel/helpline:release psd-helpline-rel/helpline:gittag"
-
-                //HotFix
-                sh "echo 'oc tag psd-helpline-rel/helpline:hotfix psd-helpline-rel/helpline:gittag"
-
-                //Master Deploy
-                sh "echo 'oc tag psd-helpline-rel/helpline:gittag psd-helpline-prd/helpline:gittag"
-                //Could just grab :release and :hotfix image to tag as well.
-
             }
             stage ('Secrets Cleanup') {
                 echo 'Delete any secrets that are not needed (maybe build secrets)'
