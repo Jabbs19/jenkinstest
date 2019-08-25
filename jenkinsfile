@@ -167,6 +167,8 @@ podTemplate(
                     echo 'Branch Name:' + env.BRANCH_NAME
                     error 'Non Branch or Tag execution.'
                 }
+
+                //Print Variables for Logging.
                 echo 'Display Some Variables for Logging'
                 echo 'Branch Name:' + env.BRANCH_NAME
                 echo 'Build Project: ' + IMAGE_BUILD_OS_PROJECT
@@ -175,9 +177,6 @@ podTemplate(
                 echo 'Deploy Image Name: ' +  DEPLOY_OS_PROJECT + '/' + IMAGE_NAME + ':' + DEPLOY_IMAGE_TAG
                 echo 'Commit Tag: ' + GIT_COMMIT_HEAD_TAG
                 echo 'App Version (If Applicable): ' + APP_VERSION
-                sh """
-                echo 'Via Shell, App Version: ${APP_VERSION}'
-                """
             }
         }
         stage('Unit Test') {
@@ -210,11 +209,7 @@ podTemplate(
                     */
                 } else if (env.BRANCH_NAME.contains(HOT_TAG_FILTER) && GIT_COMMIT_HEAD_TAG.contains(HOT_TAG_FILTER)){
                     echo 'No Unit Test'
-                } else {
-                    echo 'No Unit Test'
-                    echo 'Head Tag:' + GIT_COMMIT_HEAD_TAG
-                    echo 'Branch Name:' + env.BRANCH_NAME
-                }
+                } 
             }
         }
         stage('Checkmarx') {
@@ -229,11 +224,7 @@ podTemplate(
                     echo 'Execute Checkmarx'
                 } else if (env.BRANCH_NAME.contains(HOT_TAG_FILTER) && GIT_COMMIT_HEAD_TAG.contains(HOT_TAG_FILTER)){
                     echo 'No Checkmarx'
-                } else {
-                    echo 'No Checkmarx'
-                    echo 'Head Tag:' + GIT_COMMIT_HEAD_TAG
-                    echo 'Branch Name:' + env.BRANCH_NAME
-                }
+                } 
             }
         }
         
@@ -304,7 +295,7 @@ podTemplate(
                     echo 'oc create secret generic bt-helpline-secret --from-literal=database-password="${DATABASE_PWD}" --from-literal=keybase="${KEYBASE}"'                  
                     """ 
                     
-                 } else if (env.BRANCH_NAME.contains(HOT_TAG_FILTER) && GIT_COMMIT_HEAD_TAG.contains(HOT_TAG_FILTER)){
+                } else if (env.BRANCH_NAME.contains(HOT_TAG_FILTER) && GIT_COMMIT_HEAD_TAG.contains(HOT_TAG_FILTER)){
                     echo '1. Delete All Secrets. 2. Create Image build secrets. 3. Create Application Secrets.'
                     sh """
                     echo 'oc project ${DEPLOY_OS_PROJECT}'
@@ -316,12 +307,7 @@ podTemplate(
                     echo 'oc create secret generic bt-helpline-secret-rails --from-literal=RAILS_MASTER_KEY="${RAILS_MASTER_KEY}"''
                     echo 'oc create secret generic bt-helpline-secret --from-literal=database-password="${DATABASE_PWD}" --from-literal=keybase="${KEYBASE}"''                   
                     """ 
- 
-                 } else {
-                    echo 'No Checkmarx'
-                    echo 'Head Tag:' + GIT_COMMIT_HEAD_TAG
-                    echo 'Branch Name:' + env.BRANCH_NAME
-                }
+                } 
             }
 
             stage('Build Image') {
@@ -332,7 +318,7 @@ podTemplate(
                     echo 'Build on ' + env.BRANCH_NAME
                     echo 'Full Image Name:' + IMAGE_BUILD_FULL_NAME
 
-                    //Image Tag is already set in BuildConfig
+                    //Image Tag is already set in BuildConfig (need "special" one for HotFix in Release Environment)
                     sh"""
                     oc whoami
                     echo 'oc start-build "helpline-build" --from-repo="." --wait=true --follow -n ${IMAGE_BUILD_OS_PROJECT}'
@@ -361,12 +347,18 @@ podTemplate(
             container('helm') {
                 stage('Initialize Helm') {
                     echo 'Initialize Helm Client and Check tiller access'
-                    //sh 'helm init --client-only'
-                    //sh 'helm version --tiller-namespace $HELM_TILLER_NAMESPACE'
-                    }
+                    
+                    sh """
+                    echo '"'helm init --client-only'
+                    echo 'helm version --tiller-namespace ${HELM_TILLER_NAMESPACE}'
+                    """
+                }
                 stage('Lint Tests') {
                     echo 'Run Helm Lint Test'
-                    //sh 'helm lint ${HELM_CHART_LOCATION}'
+
+                    sh """
+                    echo 'helm lint ${HELM_CHART_LOCATION}'
+                    """
                 }
                 stage('Helm Versioning') {
                     if (env.BRANCH_NAME == 'develop' || env.BRANCH_NAME == 'stage') {
@@ -480,10 +472,21 @@ podTemplate(
                         --set image.apiTag=${DEPLOY_IMAGE_TAG} \
                         '
                         """
-                    } else {
-                        echo 'No Deploy.'
-                        echo 'Head Tag:' + GIT_COMMIT_HEAD_TAG
-                        echo 'Branch Name:' + env.BRANCH_NAME
+                    }
+                }
+                stage('JIRA') {
+                    container('jnlp') {
+                        if (env.BRANCH_NAME == 'master') {
+                            echo 'JIRA Update of Issue/Ticket that its available in Production'
+                        } else if (env.BRANCH_NAME == 'develop'){
+                            echo 'No Update'
+                        } else if (env.BRANCH_NAME == 'stage'){
+                            echo 'No Update'
+                        } else if (env.BRANCH_NAME.contains(REL_TAG_FILTER) && GIT_COMMIT_HEAD_TAG.contains(REL_TAG_FILTER)){
+                            echo 'JIRA Update of Issue/Ticket that its available for Testing'
+                        } else if (env.BRANCH_NAME.contains(HOT_TAG_FILTER) && GIT_COMMIT_HEAD_TAG.contains(HOT_TAG_FILTER)){
+                            echo 'No Update'
+                        } 
                     }
                 }
             }
