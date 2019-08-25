@@ -460,7 +460,7 @@ podTemplate(
                         echo 'No deploy for HotFix.'
                         
                     } else if (env.BRANCH_NAME == 'develop' || env.BRANCH_NAME == 'stage' || (env.BRANCH_NAME.contains(REL_TAG_FILTER) && GIT_COMMIT_HEAD_TAG.contains(REL_TAG_FILTER))){
-                        echo 'Deploy with helm to ' + DEPLOY_OS_PROJECT + ' with tag:' + DEPLOY_IMAGE_NAME
+                        echo 'Deploy with helm to ' + DEPLOY_OS_PROJECT + ' with tag:' + DEPLOY_IMAGE_TAG
 
                         sh """
                         echo 'helm upgrade --install ${HELM_RELEASE_NAME_FINAL} \
