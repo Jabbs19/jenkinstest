@@ -24,8 +24,6 @@ def STAGE_HELM_VALUES_LOC = "helm/helpline/values.yaml"
 def HOTFIX_IMAGE_TAG = "hotfix"
 //def STAGE_HELM_VALUES_LOC = "helm/helpline/values-hot.yaml"
 
-Uses same helm as PRD.
-
 //Git Variables
 def TAG_FILTER="release-m-"
 def HOTFIX_TAG_FILTER = "hotfix-m-"
@@ -245,7 +243,7 @@ podTemplate(
                 def RAILS_MASTER_KEY = 'rails-master-key-14njfgaht3q3tj'
                 def DATABASE_PWD = 'hereismydbapassword'
                 def KEYBASE = '75q05704319750914375093475070134901'
-                
+
                 if (env.BRANCH_NAME == 'master') {
                     echo '1. Delete All Secrets in PRD. 2. Create Application Secrets in PRD.'
                     sh """
