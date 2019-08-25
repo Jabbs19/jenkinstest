@@ -94,9 +94,7 @@ podTemplate(
                     echo 'App Version Parsing Complete (if needed): ' + APP_VERSION
                 }
                 GIT_SHORT_COMMIT = sh(returnStdout: true, script: "git rev-parse --short HEAD | tail -1").trim()
-                if (APP_VERSION == "") {
-                    APP_VERSION = GIT_SHORT_COMMIT
-                }
+
             }
             stage('Set Branch Variables') {
                 echo 'Set Branch Variables Branch:'
@@ -385,13 +383,20 @@ podTemplate(
                             //Failed to parse chartVersion. Helm package will fail.
                             error: chartversion not found
                         }
+
                         echo 'Current Chart Version: ' + chartVersion
                         echo 'Current App Version: ' + appVersion
                         echo 'Current Image Tag: ' + currentImage
 
+                        //Makes appVersion shown in Helm always match App Versino or Git Commit.
+                        if (APP_VERSION == "") {
+                            echo 'Raise a real error here, as the parsing was not correct'
+                        } else {
+                            chartYaml.appVersion = APP_VERSION
+                        }
+
                         //Overwrite some values
                         valuesYaml.images.apiTag = APP_VERSION
-                        chartYaml.appVersion = APP_VERSION
 
                         sh "rm -f helm/helpline/values.yaml"
                         sh "rm -f helm/helpline/Chart.yaml"
@@ -418,6 +423,7 @@ podTemplate(
 
                         def chartVersion = chartYaml.version.toString()
                         def appVersion = chartYaml.appVersion.toString()
+
                         def currentImage = valuesYaml.images.apiTag.toString()
 
                         if (chartVersion == "") {
