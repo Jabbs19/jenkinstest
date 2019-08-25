@@ -391,6 +391,7 @@ podTemplate(
                         //Makes appVersion shown in Helm always match App Versino or Git Commit.
                         if (APP_VERSION == "") {
                             echo 'Raise a real error here, as the parsing was not correct'
+                            echo 'Could instead use Short Commit, for non Production Environments: ' + env.BRANCH_NAME  +'-'+GIT_SHORT_COMMIT
                         } else {
                             chartYaml.appVersion = APP_VERSION
                         }
