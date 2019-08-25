@@ -25,31 +25,33 @@ def HOT_IMAGE_TAG = "hotfix"
 //def STG_HELM_VALUES_LOC = "helm/helpline/values-hot.yaml"
 
 //Git Variables
-def TAG_FILTER="release-m-"
-def HOTFIX_TAG_FILTER = "hotfix-m-"
+def REL_TAG_FILTER="release-m-"
+def HOT_TAG_FILTER = "hotfix-m-"
 
 //Image Variables
 def IMAGE_NAME = "helpline"
 
 //Helm and Tiller Stuff
-def TILLER_NAMESPACE = 'ocp-tiller'
-def CHARTNAME_PREFIX = 'helpline'
-def CHART_LOCATION = 'helm/helpline'
-def TGZ_DEST_DIR = 'helm'
+def HELM_TILLER_NAMESPACE = 'ocp-tiller'
+def HELM_CHARTNAME = 'helpline'
+def HELM_CHART_LOCATION = 'helm/helpline'
+def HELM_TGZ_DEST_DIR = 'helm'
 
-//Global Variables
+//Global "to-be-assigned" Variables
 def IMAGE_BUILD_OS_PROJECT = ""     //e.g. psd-helpline-tst
 def IMAGE_BUILD_TAG = ""            //:test
 def IMAGE_BUILD_FULL_NAME = ""      //Full Image Name Image 
+def IMAGE_BUILD_SECONDARY_TAG = ""  //Additional tags to be applied after Build
 def DEPLOY_IMAGE_TAG = ""
 def DEPLOY_IMAGE_NAME = ""
-def COMMIT_HEAD_TAG = ""
-def RELEASE_NAME_FINAL = ""
-def VALUES_YAML_FINAL = ""
+def DEPLOY_OS_PROJECT = ""          //Project that the image will be pulled from for deployment.
+
+def GIT_COMMIT_HEAD_TAG = ""
+def GIT_SHORT_COMMIT = ""
+def HELM_RELEASE_NAME_FINAL = ""
+def HELM_YAML_LOCATION_FINAL = ""
 def APP_VERSION = ""
       //Project that image will be built/tagged to.
-def OS_DEPLOY_PROJECT = ""      //Project that the image will be pulled from for deployment.
-def SECONDARY_TAG_FINAL = ""
 
 podTemplate(
     label: label,
@@ -77,15 +79,15 @@ podTemplate(
         container('jnlp') {
             stage('SCM Checkout') {
                 checkout scm
-                COMMIT_HEAD_TAG = sh(returnStdout: true, script: "git tag -l --points-at HEAD | tail -1").trim()
-                echo 'Commit Head Tag:' + COMMIT_HEAD_TAG
+                GIT_COMMIT_HEAD_TAG = sh(returnStdout: true, script: "git tag -l --points-at HEAD | tail -1").trim()
+                echo 'Commit Head Tag:' + GIT_COMMIT_HEAD_TAG
                 echo 'Current Branch Name:' + env.BRANCH_NAME
                 //Build "App Version"
-                if (COMMIT_HEAD_TAG != "") {
-                    if (COMMIT_HEAD_TAG.substring(0,TAG_FILTER.length()) == TAG_FILTER) {
-                        APP_VERSION = COMMIT_HEAD_TAG.substring(TAG_FILTER.length(),COMMIT_HEAD_TAG.length())
-                    } else if (COMMIT_HEAD_TAG.substring(0,HOTFIX_TAG_FILTER.length()) == HOTFIX_TAG_FILTER) {
-                        APP_VERSION = COMMIT_HEAD_TAG.substring(HOTFIX_TAG_FILTER.length(),COMMIT_HEAD_TAG.length())
+                if (GIT_COMMIT_HEAD_TAG != "") {
+                    if (GIT_COMMIT_HEAD_TAG.substring(0,REL_TAG_FILTER.length()) == REL_TAG_FILTER) {
+                        APP_VERSION = GIT_COMMIT_HEAD_TAG.substring(REL_TAG_FILTER.length(),GIT_COMMIT_HEAD_TAG.length())
+                    } else if (GIT_COMMIT_HEAD_TAG.substring(0,HOT_TAG_FILTER.length()) == HOT_TAG_FILTER) {
+                        APP_VERSION = GIT_COMMIT_HEAD_TAG.substring(HOT_TAG_FILTER.length(),GIT_COMMIT_HEAD_TAG.length())
                     } else {
                         APP_VERSION = ""
                     }
@@ -98,67 +100,67 @@ podTemplate(
                     echo 'Executing on Master'
                     IMAGE_BUILD_OS_PROJECT = ""
                     IMAGE_BUILD_TAG = ""
-                    OS_DEPLOY_PROJECT = PRD_OS_PROJECT
+                    DEPLOY_OS_PROJECT = PRD_OS_PROJECT
                     DEPLOY_IMAGE_TAG = APP_VERSION
-                    DEPLOY_IMAGE_NAME = OS_DEPLOY_PROJECT + '/' + IMAGE_NAME + ':' + DEPLOY_IMAGE_TAG
-                    RELEASE_NAME_FINAL = CHARTNAME_PREFIX + '-prd'
-                    VALUES_YAML_FINAL = PRD_HELM_VALUES_LOC
-                    SECONDARY_TAG_FINAL = PRD_OS_PROJECT + '/' + IMAGE_NAME + ':' + APP_VERSION
+                    DEPLOY_IMAGE_NAME = DEPLOY_OS_PROJECT + '/' + IMAGE_NAME + ':' + DEPLOY_IMAGE_TAG
+                    HELM_RELEASE_NAME_FINAL = HELM_CHARTNAME + '-prd'
+                    HELM_YAML_LOCATION_FINAL = PRD_HELM_VALUES_LOC
+                    IMAGE_BUILD_SECONDARY_TAG = PRD_OS_PROJECT + '/' + IMAGE_NAME + ':' + APP_VERSION
                     //Tags for Master Release Checks.  Could add more filters, sig checks, etc.
-                    if (COMMIT_HEAD_TAG == "") {
+                    if (GIT_COMMIT_HEAD_TAG == "") {
                         error "No Git Version at Master Head"
                     } 
                 } else if (env.BRANCH_NAME == 'develop'){
                     echo 'Execute on Develop'
                     IMAGE_BUILD_OS_PROJECT = DEV_OS_PROJECT
                     IMAGE_BUILD_TAG = DEV_IMAGE_TAG
-                    OS_DEPLOY_PROJECT = DEV_OS_PROJECT
+                    DEPLOY_OS_PROJECT = DEV_OS_PROJECT
                     DEPLOY_IMAGE_TAG = DEV_IMAGE_TAG
-                    VALUES_YAML_FINAL = DEV_HELM_VALUES_LOC
-                    RELEASE_NAME_FINAL = CHARTNAME_PREFIX + '-dev'
-                    SECONDARY_TAG_FINAL = ""
+                    HELM_YAML_LOCATION_FINAL = DEV_HELM_VALUES_LOC
+                    HELM_RELEASE_NAME_FINAL = HELM_CHARTNAME + '-dev'
+                    IMAGE_BUILD_SECONDARY_TAG = ""
 
                 } else if (env.BRANCH_NAME == 'stage'){
                     echo 'Execute on Stage'
                     IMAGE_BUILD_OS_PROJECT = STG_OS_PROJECT
                     IMAGE_BUILD_TAG = STG_IMAGE_TAG
-                    OS_DEPLOY_PROJECT = STG_OS_PROJECT
+                    DEPLOY_OS_PROJECT = STG_OS_PROJECT
                     DEPLOY_IMAGE_TAG = STG_IMAGE_TAG
-                    VALUES_YAML_FINAL = STG_HELM_VALUES_LOC
-                    RELEASE_NAME_FINAL = CHARTNAME_PREFIX + '-stg'
-                    SECONDARY_TAG_FINAL = ""
+                    HELM_YAML_LOCATION_FINAL = STG_HELM_VALUES_LOC
+                    HELM_RELEASE_NAME_FINAL = HELM_CHARTNAME + '-stg'
+                    IMAGE_BUILD_SECONDARY_TAG = ""
 
-                } else if (env.BRANCH_NAME.contains(TAG_FILTER) && COMMIT_HEAD_TAG.contains(TAG_FILTER)){
-                    echo 'Execute on specific "Release" Tag of:' + TAG_FILTER
+                } else if (env.BRANCH_NAME.contains(REL_TAG_FILTER) && GIT_COMMIT_HEAD_TAG.contains(REL_TAG_FILTER)){
+                    echo 'Execute on specific "Release" Tag of:' + REL_TAG_FILTER
                     IMAGE_BUILD_OS_PROJECT = REL_OS_PROJECT
                     IMAGE_BUILD_TAG = REL_IMAGE_TAG
-                    OS_DEPLOY_PROJECT = REL_OS_PROJECT
+                    DEPLOY_OS_PROJECT = REL_OS_PROJECT
                     DEPLOY_IMAGE_TAG = APP_VERSION
-                    VALUES_YAML_FINAL = REL_HELM_VALUES_LOC
-                    RELEASE_NAME_FINAL = CHARTNAME_PREFIX + '-rel'
-                    SECONDARY_TAG_FINAL = OS_DEPLOY_PROJECT + '/' + IMAGE_NAME + ':' + APP_VERSION
+                    HELM_YAML_LOCATION_FINAL = REL_HELM_VALUES_LOC
+                    HELM_RELEASE_NAME_FINAL = HELM_CHARTNAME + '-rel'
+                    IMAGE_BUILD_SECONDARY_TAG = DEPLOY_OS_PROJECT + '/' + IMAGE_NAME + ':' + APP_VERSION
 
-                    if (COMMIT_HEAD_TAG == "") {
+                    if (GIT_COMMIT_HEAD_TAG == "") {
                         error "No Git Version at Commit Head"
                     } 
 
-                } else if (env.BRANCH_NAME.contains(HOTFIX_TAG_FILTER) && COMMIT_HEAD_TAG.contains(HOTFIX_TAG_FILTER)){
-                    echo 'Execute on specific "HotFix" Tag of:' + HOTFIX_TAG_FILTER
+                } else if (env.BRANCH_NAME.contains(HOT_TAG_FILTER) && GIT_COMMIT_HEAD_TAG.contains(HOT_TAG_FILTER)){
+                    echo 'Execute on specific "HotFix" Tag of:' + HOT_TAG_FILTER
                     IMAGE_BUILD_OS_PROJECT = REL_OS_PROJECT
                     IMAGE_BUILD_TAG = HOT_IMAGE_TAG
-                    OS_DEPLOY_PROJECT = REL_OS_PROJECT //Doesn't actually deploy.
+                    DEPLOY_OS_PROJECT = REL_OS_PROJECT //Doesn't actually deploy.
                     DEPLOY_IMAGE_TAG = APP_VERSION
-                    VALUES_YAML_FINAL = PRD_HELM_VALUES_LOC
-                    RELEASE_NAME_FINAL = CHARTNAME_PREFIX + '-hot'  //Doesn't actually deploy or use helm.
-                    SECONDARY_TAG_FINAL = OS_DEPLOY_PROJECT + '/' + IMAGE_NAME + ':' + APP_VERSION
-                    if (COMMIT_HEAD_TAG == "") {
+                    HELM_YAML_LOCATION_FINAL = PRD_HELM_VALUES_LOC
+                    HELM_RELEASE_NAME_FINAL = HELM_CHARTNAME + '-hot'  //Doesn't actually deploy or use helm.
+                    IMAGE_BUILD_SECONDARY_TAG = DEPLOY_OS_PROJECT + '/' + IMAGE_NAME + ':' + APP_VERSION
+                    if (GIT_COMMIT_HEAD_TAG == "") {
                         error "No Git Version at Commit Head"
                     } 
 
                 }
                 else {
                     echo 'Non Branch or Tag execution.'
-                    echo 'Head Tag:' + COMMIT_HEAD_TAG
+                    echo 'Head Tag:' + GIT_COMMIT_HEAD_TAG
                     echo 'Branch Name:' + env.BRANCH_NAME
                     error 'Non Branch or Tag execution.'
                 }
@@ -166,9 +168,9 @@ podTemplate(
                 echo 'Branch Name:' + env.BRANCH_NAME
                 echo 'Build Project: ' + IMAGE_BUILD_OS_PROJECT
                 echo 'Build Image Name: ' + IMAGE_BUILD_OS_PROJECT + '/' + IMAGE_NAME + ':' + IMAGE_BUILD_TAG
-                echo 'Deploy Project: ' + OS_DEPLOY_PROJECT
-                echo 'Deploy Image Name: ' +  OS_DEPLOY_PROJECT + '/' + IMAGE_NAME + ':' + DEPLOY_IMAGE_TAG
-                echo 'Commit Tag: ' + COMMIT_HEAD_TAG
+                echo 'Deploy Project: ' + DEPLOY_OS_PROJECT
+                echo 'Deploy Image Name: ' +  DEPLOY_OS_PROJECT + '/' + IMAGE_NAME + ':' + DEPLOY_IMAGE_TAG
+                echo 'Commit Tag: ' + GIT_COMMIT_HEAD_TAG
                 echo 'App Version (If Applicable): ' + APP_VERSION
                 sh """
                 echo 'Via Shell, App Version: ${APP_VERSION}'
@@ -183,7 +185,7 @@ podTemplate(
                     echo 'No Unit Test'
                 } else if (env.BRANCH_NAME == 'stage'){
                     echo 'No Unit Test'
-                } else if (env.BRANCH_NAME.contains(TAG_FILTER) && COMMIT_HEAD_TAG.contains(TAG_FILTER)){
+                } else if (env.BRANCH_NAME.contains(REL_TAG_FILTER) && GIT_COMMIT_HEAD_TAG.contains(REL_TAG_FILTER)){
                     echo 'Execute Unit Tests'
                     sh """
                     ruby -v
@@ -203,11 +205,11 @@ podTemplate(
                         }
                     }
                     */
-                } else if (env.BRANCH_NAME.contains(HOTFIX_TAG_FILTER) && COMMIT_HEAD_TAG.contains(HOTFIX_TAG_FILTER)){
+                } else if (env.BRANCH_NAME.contains(HOT_TAG_FILTER) && GIT_COMMIT_HEAD_TAG.contains(HOT_TAG_FILTER)){
                     echo 'No Unit Test'
                 } else {
                     echo 'No Unit Test'
-                    echo 'Head Tag:' + COMMIT_HEAD_TAG
+                    echo 'Head Tag:' + GIT_COMMIT_HEAD_TAG
                     echo 'Branch Name:' + env.BRANCH_NAME
                 }
             }
@@ -220,13 +222,13 @@ podTemplate(
                     echo 'No Checkmarx'
                 } else if (env.BRANCH_NAME == 'stage'){
                     echo 'No Checkmarx'
-                } else if (env.BRANCH_NAME.contains(TAG_FILTER) && COMMIT_HEAD_TAG.contains(TAG_FILTER)){
+                } else if (env.BRANCH_NAME.contains(REL_TAG_FILTER) && GIT_COMMIT_HEAD_TAG.contains(REL_TAG_FILTER)){
                     echo 'Execute Checkmarx'
-                } else if (env.BRANCH_NAME.contains(HOTFIX_TAG_FILTER) && COMMIT_HEAD_TAG.contains(HOTFIX_TAG_FILTER)){
+                } else if (env.BRANCH_NAME.contains(HOT_TAG_FILTER) && GIT_COMMIT_HEAD_TAG.contains(HOT_TAG_FILTER)){
                     echo 'No Checkmarx'
                 } else {
                     echo 'No Checkmarx'
-                    echo 'Head Tag:' + COMMIT_HEAD_TAG
+                    echo 'Head Tag:' + GIT_COMMIT_HEAD_TAG
                     echo 'Branch Name:' + env.BRANCH_NAME
                 }
             }
@@ -254,8 +256,8 @@ podTemplate(
                 if (env.BRANCH_NAME == 'master') {
                     echo '1. Delete All Secrets in PRD. 2. Create Application Secrets in PRD.'
                     sh """
-                    echo 'oc project ${OS_DEPLOY_PROJECT}'
-                    echo 'oc delete secret "bt-helpline-secret" -n ${OS_DEPLOY_PROJECT}'
+                    echo 'oc project ${DEPLOY_OS_PROJECT}'
+                    echo 'oc delete secret "bt-helpline-secret" -n ${DEPLOY_OS_PROJECT}'
                     """
 
                     sh """
@@ -264,9 +266,9 @@ podTemplate(
                 } else if (env.BRANCH_NAME == 'develop'){
                     echo '1. Delete All Secrets in TST. 2. Create Image build secretsin TST. 3. Create Application Secrets in TST.'
                     sh """
-                    echo 'oc project ${OS_DEPLOY_PROJECT}'
+                    echo 'oc project ${DEPLOY_OS_PROJECT}'
                     echo 'oc delete secret "bt-helpline-secret-rails" -n ${IMAGE_BUILD_OS_PROJECT}'
-                    echo 'oc delete secret "bt-helpline-secret" -n ${OS_DEPLOY_PROJECT}'
+                    echo 'oc delete secret "bt-helpline-secret" -n ${DEPLOY_OS_PROJECT}'
                     """               
 
                     sh """
@@ -276,9 +278,9 @@ podTemplate(
                 } else if (env.BRANCH_NAME == 'stage'){
                     echo '1. Delete All Secrets in STG. 2. Create Image build secretsin TST. 3. Create Application Secrets in TST.'
                     sh """
-                    echo 'oc project ${OS_DEPLOY_PROJECT}'
+                    echo 'oc project ${DEPLOY_OS_PROJECT}'
                     echo 'oc delete secret "bt-helpline-secret-rails" -n ${IMAGE_BUILD_OS_PROJECT}'
-                    echo 'oc delete secret "bt-helpline-secret" -n ${OS_DEPLOY_PROJECT}'
+                    echo 'oc delete secret "bt-helpline-secret" -n ${DEPLOY_OS_PROJECT}'
                     """      
 
                     sh """
@@ -286,12 +288,12 @@ podTemplate(
                     echo 'oc create secret generic bt-helpline-secret --from-literal=database-password="${DATABASE_PWD}" --from-literal=keybase="${KEYBASE}"'                    
                     """ 
 
-                } else if (env.BRANCH_NAME.contains(TAG_FILTER) && COMMIT_HEAD_TAG.contains(TAG_FILTER)){
+                } else if (env.BRANCH_NAME.contains(REL_TAG_FILTER) && GIT_COMMIT_HEAD_TAG.contains(REL_TAG_FILTER)){
                     echo '1. Delete All Secrets. 2. Create Image build secrets. 3. Create Application Secrets.'
                     sh """
-                    echo 'oc project ${OS_DEPLOY_PROJECT}'
+                    echo 'oc project ${DEPLOY_OS_PROJECT}'
                     echo 'oc delete secret "bt-helpline-secret-rails" -n ${IMAGE_BUILD_OS_PROJECT}'
-                    echo 'oc delete secret "bt-helpline-secret" -n ${OS_DEPLOY_PROJECT}'
+                    echo 'oc delete secret "bt-helpline-secret" -n ${DEPLOY_OS_PROJECT}'
                     """
  
                     sh """
@@ -299,12 +301,12 @@ podTemplate(
                     echo 'oc create secret generic bt-helpline-secret --from-literal=database-password="${DATABASE_PWD}" --from-literal=keybase="${KEYBASE}"'                  
                     """ 
                     
-                 } else if (env.BRANCH_NAME.contains(HOTFIX_TAG_FILTER) && COMMIT_HEAD_TAG.contains(HOTFIX_TAG_FILTER)){
+                 } else if (env.BRANCH_NAME.contains(HOT_TAG_FILTER) && GIT_COMMIT_HEAD_TAG.contains(HOT_TAG_FILTER)){
                     echo '1. Delete All Secrets. 2. Create Image build secrets. 3. Create Application Secrets.'
                     sh """
-                    echo 'oc project ${OS_DEPLOY_PROJECT}'
+                    echo 'oc project ${DEPLOY_OS_PROJECT}'
                     echo 'oc delete secret "bt-helpline-secret-rails" -n ${IMAGE_BUILD_OS_PROJECT}'
-                    echo 'oc delete secret "bt-helpline-secret" -n ${OS_DEPLOY_PROJECT}'
+                    echo 'oc delete secret "bt-helpline-secret" -n ${DEPLOY_OS_PROJECT}'
                     """
  
                     sh """
@@ -314,15 +316,15 @@ podTemplate(
  
                  } else {
                     echo 'No Checkmarx'
-                    echo 'Head Tag:' + COMMIT_HEAD_TAG
+                    echo 'Head Tag:' + GIT_COMMIT_HEAD_TAG
                     echo 'Branch Name:' + env.BRANCH_NAME
                 }
             }
 
             stage('Build Image') {
                 if (env.BRANCH_NAME == 'develop' || env.BRANCH_NAME == 'stage' \
-                    || (env.BRANCH_NAME.contains(TAG_FILTER) && COMMIT_HEAD_TAG.contains(TAG_FILTER)) \
-                    || (env.BRANCH_NAME.contains(HOTFIX_TAG_FILTER) && COMMIT_HEAD_TAG.contains(HOTFIX_TAG_FILTER)) \
+                    || (env.BRANCH_NAME.contains(REL_TAG_FILTER) && GIT_COMMIT_HEAD_TAG.contains(REL_TAG_FILTER)) \
+                    || (env.BRANCH_NAME.contains(HOT_TAG_FILTER) && GIT_COMMIT_HEAD_TAG.contains(HOT_TAG_FILTER)) \
                    ) {
                     echo 'Build on ' + env.BRANCH_NAME
                     echo 'Full Image Name:' + IMAGE_BUILD_FULL_NAME
@@ -335,16 +337,16 @@ podTemplate(
                 } 
             }
             stage('Image Management') {
-                if ((env.BRANCH_NAME.contains(TAG_FILTER) && COMMIT_HEAD_TAG.contains(TAG_FILTER)) \
-                    || (env.BRANCH_NAME.contains(HOTFIX_TAG_FILTER) && COMMIT_HEAD_TAG.contains(HOTFIX_TAG_FILTER))) {
-                    echo 'Tag Image as ' + SECONDARY_TAG_FINAL + 'also'
+                if ((env.BRANCH_NAME.contains(REL_TAG_FILTER) && GIT_COMMIT_HEAD_TAG.contains(REL_TAG_FILTER)) \
+                    || (env.BRANCH_NAME.contains(HOT_TAG_FILTER) && GIT_COMMIT_HEAD_TAG.contains(HOT_TAG_FILTER))) {
+                    echo 'Tag Image as ' + IMAGE_BUILD_SECONDARY_TAG + 'also'
                     // This is already set in the beginning configuration section, but could be done here.
-                    //SECONDARY_TAG_FINAL = REL_OS_PROJECT + '/' + IMAGE_NAME + ':' + APP_VERSION
-                    sh "echo 'oc tag ${IMAGE_BUILD_FULL_NAME} ${SECONDARY_TAG_FINAL}'"
+                    //IMAGE_BUILD_SECONDARY_TAG = REL_OS_PROJECT + '/' + IMAGE_NAME + ':' + APP_VERSION
+                    sh "echo 'oc tag ${IMAGE_BUILD_FULL_NAME} ${IMAGE_BUILD_SECONDARY_TAG}'"
                 } else if (env.BRANCH_NAME == 'master') {
                     // This is already set in the beginning configuration section, but could be done here.
-                    //SECONDARY_TAG_FINAL = PRD_OS_PROJECT + '/' + IMAGE_NAME + ':' + APP_VERSION
-                    sh "echo 'oc tag ${IMAGE_BUILD_FULL_NAME} ${SECONDARY_TAG_FINAL}'"
+                    //IMAGE_BUILD_SECONDARY_TAG = PRD_OS_PROJECT + '/' + IMAGE_NAME + ':' + APP_VERSION
+                    sh "echo 'oc tag ${IMAGE_BUILD_FULL_NAME} ${IMAGE_BUILD_SECONDARY_TAG}'"
                 }
             }
             stage ('Secrets Cleanup') {
@@ -357,11 +359,11 @@ podTemplate(
                 stage('Initialize Helm') {
                     echo 'Initialize Helm Client and Check tiller access'
                     //sh 'helm init --client-only'
-                    //sh 'helm version --tiller-namespace $TILLER_NAMESPACE'
+                    //sh 'helm version --tiller-namespace $HELM_TILLER_NAMESPACE'
                     }
                 stage('Lint Tests') {
                     echo 'Run Helm Lint Test'
-                    //sh 'helm lint ${CHART_LOCATION}'
+                    //sh 'helm lint ${HELM_CHART_LOCATION}'
                 }
 //                if (env.BRANCH_NAME == 'master' ){
                 if (env.BRANCH_NAME == 'develop' ){
@@ -442,48 +444,48 @@ podTemplate(
                     //Could make this a "configuration step, and just set all remaining values before a global "deploy"
                     if (env.BRANCH_NAME == 'master'){
                         //Set Full path of TGZ
-                        //def TGZ_PATH = TGZ_DEST_DIR + '/' + PACKAGE_NAME 
+                        //def TGZ_PATH = HELM_TGZ_DEST_DIR + '/' + PACKAGE_NAME 
                         
                         /* Real Code Below
                         sh """
-                        helm version --tiller-namespace ${TILLER_NAMESPACE} \
-                        helm upgrade --install ${RELEASE_NAME_FINAL} \
+                        helm version --tiller-namespace ${HELM_TILLER_NAMESPACE} \
+                        helm upgrade --install ${HELM_RELEASE_NAME_FINAL} \
                         ${TGZ_PATH} \
-                        --namespace ${OS_DEPLOY_PROJECT} \
-                        --tiller-namespace ${TILLER_NAMESPACE} \
-                        -f ${VALUES_YAML_FINAL} \
-                        --set image.apiRepository=${OS_DEPLOY_PROJECT}
+                        --namespace ${DEPLOY_OS_PROJECT} \
+                        --tiller-namespace ${HELM_TILLER_NAMESPACE} \
+                        -f ${HELM_YAML_LOCATION_FINAL} \
+                        --set image.apiRepository=${DEPLOY_OS_PROJECT}
                         --set image.apiTag=${DEPLOY_IMAGE_TAG}
                         """
                         */
                         
-                        echo 'Deploy Production with helm to ' + OS_DEPLOY_PROJECT + ' with tag:' + DEPLOY_IMAGE_NAME
+                        echo 'Deploy Production with helm to ' + DEPLOY_OS_PROJECT + ' with tag:' + DEPLOY_IMAGE_NAME
                         sh 'helm --help'
-                    } else if (env.BRANCH_NAME.contains(HOTFIX_TAG_FILTER) && COMMIT_HEAD_TAG.contains(HOTFIX_TAG_FILTER)) {
+                    } else if (env.BRANCH_NAME.contains(HOT_TAG_FILTER) && GIT_COMMIT_HEAD_TAG.contains(HOT_TAG_FILTER)) {
                        //No deploy for Helm.  Could deploy into PRD off this (instead of merging to master.  Not sure I like)
                        //Could deploy into Hot Fix environment, build one on the fly, or into Release.
                         echo 'No deploy for HotFix.'
                         
-                    } else if (env.BRANCH_NAME == 'develop' || env.BRANCH_NAME == 'stage' || (env.BRANCH_NAME.contains(TAG_FILTER) && COMMIT_HEAD_TAG.contains(TAG_FILTER))){
+                    } else if (env.BRANCH_NAME == 'develop' || env.BRANCH_NAME == 'stage' || (env.BRANCH_NAME.contains(REL_TAG_FILTER) && GIT_COMMIT_HEAD_TAG.contains(REL_TAG_FILTER))){
                         /* Real Code Below
                         sh """
-                        helm version --tiller-namespace ${TILLER_NAMESPACE} \
-                        helm upgrade --install ${RELEASE_NAME_FINAL} \
-                        ${CHART_LOCATION} \
-                        --namespace ${OS_DEPLOY_PROJECT} \
-                        --tiller-namespace ${TILLER_NAMESPACE} \
-                        -f ${VALUES_YAML_FINAL} \
-                        --set image.apiRepository=${OS_DEPLOY_PROJECT}
+                        helm version --tiller-namespace ${HELM_TILLER_NAMESPACE} \
+                        helm upgrade --install ${HELM_RELEASE_NAME_FINAL} \
+                        ${HELM_CHART_LOCATION} \
+                        --namespace ${DEPLOY_OS_PROJECT} \
+                        --tiller-namespace ${HELM_TILLER_NAMESPACE} \
+                        -f ${HELM_YAML_LOCATION_FINAL} \
+                        --set image.apiRepository=${DEPLOY_OS_PROJECT}
                         --set image.apiTag=${DEPLOY_IMAGE_TAG}
                         """
                         */
 
                         //Deploy with :test
-                        echo 'Deploy with helm to ' + OS_DEPLOY_PROJECT + ' with tag:' + DEPLOY_IMAGE_NAME
+                        echo 'Deploy with helm to ' + DEPLOY_OS_PROJECT + ' with tag:' + DEPLOY_IMAGE_NAME
                         sh 'helm --help'
                     } else {
                         echo 'No Deploy.'
-                        echo 'Head Tag:' + COMMIT_HEAD_TAG
+                        echo 'Head Tag:' + GIT_COMMIT_HEAD_TAG
                         echo 'Branch Name:' + env.BRANCH_NAME
                     }
                 }
