@@ -399,10 +399,10 @@ podTemplate(
 
                         sh "rm -f helm/helpline/values.yaml"
                         sh "rm -f helm/helpline/Chart.yaml"
-
+                        echo valuesYaml.images.apiTag.toString()
                         writeYaml file: "helm/helpline/values.yaml", data: valuesYaml
                         writeYaml file: "helm/helpline/Chart.yaml", data: chartYaml
-                        echo valuesYaml
+
                         echo 'overwrite values.yaml'
                     }
                     stage('Push to ChartMuseum') {
