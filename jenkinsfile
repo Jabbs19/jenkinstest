@@ -94,8 +94,8 @@ podTemplate(
                 if (env.BRANCH_NAME == 'master') {
                     echo 'Executing on Master'
                     OS_DEPLOY_PROJECT = OS_PRD_PROJECT
-                    DEPLOY_IMAGE_TAG = COMMIT_HEAD_TAG
-                    DEPLOY_IMAGE_NAME = OS_DEPLOY_PROJECT + '/' + IMAGE_NAME + ':' + COMMIT_HEAD_TAG
+                    DEPLOY_IMAGE_TAG = APP_VERSION
+                    DEPLOY_IMAGE_NAME = OS_DEPLOY_PROJECT + '/' + IMAGE_NAME + ':' + DEPLOY_IMAGE_TAG
                     RELEASE_NAME_FINAL = CHARTNAME_PREFIX + '-prd'
                     VALUES_YAML_FINAL = PRD_HELM_VALUES_LOC
                     //Tags for Master Release Checks.  Could add more filters, sig checks, etc.
@@ -131,7 +131,7 @@ podTemplate(
                     BUILD_IMAGE_TAG = RELEASE_IMAGE_TAG
                     BUILD_IMAGE_NAME = OS_BUILD_PROJECT + '/' + IMAGE_NAME + ':' + BUILD_IMAGE_TAG
                     OS_DEPLOY_PROJECT = OS_REL_PROJECT
-                    DEPLOY_IMAGE_TAG = COMMIT_HEAD_TAG
+                    DEPLOY_IMAGE_TAG = APP_VERSION
                     DEPLOY_IMAGE_NAME = OS_DEPLOY_PROJECT + '/' + IMAGE_NAME + ':' + DEPLOY_IMAGE_TAG
                     VALUES_YAML_FINAL = RELEASE_HELM_VALUES_LOC
                     RELEASE_NAME_FINAL = CHARTNAME_PREFIX + '-rel'
@@ -142,7 +142,7 @@ podTemplate(
                     BUILD_IMAGE_TAG = HOTFIX_IMAGE_TAG
                     BUILD_IMAGE_NAME = OS_BUILD_PROJECT + '/' + IMAGE_NAME + ':' + BUILD_IMAGE_TAG
                     OS_DEPLOY_PROJECT = OS_PRD_PROJECT
-                    DEPLOY_IMAGE_TAG = COMMIT_HEAD_TAG
+                    DEPLOY_IMAGE_TAG = APP_VERSION
                     DEPLOY_IMAGE_NAME = OS_DEPLOY_PROJECT + '/' + IMAGE_NAME + ':' + DEPLOY_IMAGE_TAG
                     VALUES_YAML_FINAL = PRD_HELM_VALUES_LOC
                     RELEASE_NAME_FINAL = CHARTNAME_PREFIX + '-prd'
