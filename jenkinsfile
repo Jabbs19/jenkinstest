@@ -19,10 +19,12 @@ def OS_STG_PROJECT = "psd-helpline-stg"
 def STAGE_IMAGE_TAG = "feature"
 def STAGE_HELM_VALUES_LOC = "helm/helpline/values.yaml"
 
-//HotFix Variables
-def OS_HOTFIX_PROJECT = "psd-helpline-stg"
+//HotFix Variables (Not all needed unless deploying.)
+//def OS_HOTFIX_PROJECT = "psd-helpline-hot"
 def HOTFIX_IMAGE_TAG = "hotfix"
-//Uses same helm as PRD.
+//def STAGE_HELM_VALUES_LOC = "helm/helpline/values-hot.yaml"
+
+Uses same helm as PRD.
 
 //Git Variables
 def TAG_FILTER="release-m-"
@@ -149,7 +151,7 @@ podTemplate(
                     DEPLOY_IMAGE_TAG = APP_VERSION
                     DEPLOY_IMAGE_NAME = OS_DEPLOY_PROJECT + '/' + IMAGE_NAME + ':' + DEPLOY_IMAGE_TAG
                     VALUES_YAML_FINAL = PRD_HELM_VALUES_LOC
-                    RELEASE_NAME_FINAL = CHARTNAME_PREFIX + '-prd'
+                    //RELEASE_NAME_FINAL = CHARTNAME_PREFIX + '-hot'
                     if (COMMIT_HEAD_TAG == "") {
                         error "No Git Version at Commit Head"
                     } 
@@ -161,6 +163,7 @@ podTemplate(
                     echo 'Branch Name:' + env.BRANCH_NAME
                 }
                 echo 'Display Some Variables for Logging'
+                echo 'Build Project: ' + OS_BUILD_PROJECT
                 echo 'Deploy Project: ' + OS_DEPLOY_PROJECT
                 sh """
                 echo 'Via Shell, App Version: ${APP_VERSION}'
@@ -239,6 +242,10 @@ podTemplate(
                     //Put all of the If else in here.
                     }
             */
+                def RAILS_MASTER_KEY = 'rails-master-key-14njfgaht3q3tj'
+                def DATABASE_PWD = 'hereismydbapassword'
+                def KEYBASE = '75q05704319750914375093475070134901'
+                
                 if (env.BRANCH_NAME == 'master') {
                     echo '1. Delete All Secrets in PRD. 2. Create Application Secrets in PRD.'
                     sh """
@@ -291,14 +298,12 @@ podTemplate(
                 } else if (env.BRANCH_NAME.contains(HOTFIX_TAG_FILTER) && COMMIT_HEAD_TAG.contains(HOTFIX_TAG_FILTER)){
                     echo '1. Delete All Secrets. 2. Create Image build secrets. 3. Create Application Secrets.'
                     sh """
-                    echo 'oc project ${OS_DEPLOY_PROJECT}'
+                    echo 'oc project ${OS_BUILD_PROJECT}'
                     echo 'oc delete secret "bt-helpline-secret-rails" -n ${OS_BUILD_PROJECT}'
-                    echo 'oc delete secret "bt-helpline-secret" -n ${OS_DEPLOY_PROJECT}'
                     """        
  
                     sh """
                     oc create secret generic bt-helpline-secret-rails --from-literal=RAILS_MASTER_KEY="${RAILS_MASTER_KEY}"
-                    oc create secret generic bt-helpline-secret --from-literal=database-password="${DATABASE_PWD}" --from-literal=keybase="${KEYBASE}"
                     """ 
  
                  } else {
