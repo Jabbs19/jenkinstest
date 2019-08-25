@@ -424,7 +424,7 @@ podTemplate(
                         sh """"
                         echo 'sh helm package ${HELM_CHART_LOCATION} -d ${HELM_TGZ_DEST_DIR}'
                         """
-                        HELM_TGZ_PACKAGE_FINAL = HELM_CHARTNAME} + '-'+ chartVersion + '.tgz.'
+                        HELM_TGZ_PACKAGE_FINAL = HELM_CHARTNAME + '-'+ chartVersion + '.tgz.'
                         echo 'Helm .tgz Package: ' + HELM_TGZ_PACKAGE_FINAL
 
                         sh """
