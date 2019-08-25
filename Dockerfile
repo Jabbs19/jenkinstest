@@ -6,6 +6,6 @@ RUN apt-get update && apt-get install curl
 ENV MARK_ENV="07-30-2019-t2"
 ENV MARK_OTHER_ENV="1111111111"
 ENV MARK_OTHER_ENV2="222"
-ENV MARK_OTHER_ENV3="aaaaa"
+ENV MARK_OTHER_ENV3="aaaaaa"
 
 
