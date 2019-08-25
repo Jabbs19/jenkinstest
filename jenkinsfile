@@ -226,6 +226,10 @@ podTemplate(
         
         container('openshift') {
             stage('Create Secrets') {
+
+            // Will need to create uniqu credentials for all environments that have unique values.
+            // e.g. dev-rails-master-key, stg-rails-master-key, prd-rails-master-key, rel-rails-master-key
+
             /*withCredentials([
                 string(credentialsId: 'psd-rails-master-key', variable: 'RAILS_MASTER_KEY'),
                 string(credentialsId: 'psd-helpline-database-password-tst', variable: 'DATABASE_PWD'),
@@ -238,8 +242,8 @@ podTemplate(
                 if (env.BRANCH_NAME == 'master') {
                     echo '1. Delete All Secrets in PRD. 2. Create Application Secrets in PRD.'
                     sh """
-                    echo 'oc project ${OS_PROJECT_FINAL}'
-                    echo 'oc delete secret "bt-helpline-secret" -n ${OS_PROJECT_FINAL}'
+                    echo 'oc project ${OS_DEPLOY_PROJECT}'
+                    echo 'oc delete secret "bt-helpline-secret" -n ${OS_DEPLOY_PROJECT}'
                     """
 
                     sh """
@@ -249,9 +253,9 @@ podTemplate(
                 } else if (env.BRANCH_NAME == 'develop'){
                     echo '1. Delete All Secrets in TST. 2. Create Image build secretsin TST. 3. Create Application Secrets in TST.'
                     sh """
-                    echo 'oc project ${OS_PROJECT_FINAL}'
-                    echo 'oc delete secret "bt-helpline-secret-rails" -n ${OS_PROJECT_FINAL}'
-                    echo 'oc delete secret "bt-helpline-secret" -n ${OS_PROJECT_FINAL}'
+                    echo 'oc project ${OS_DEPLOY_PROJECT}'
+                    echo 'oc delete secret "bt-helpline-secret-rails" -n ${OS_BUILD_PROJECT}'
+                    echo 'oc delete secret "bt-helpline-secret" -n ${OS_DEPLOY_PROJECT}'
                     """               
 
                     sh """
@@ -261,9 +265,9 @@ podTemplate(
                 } else if (env.BRANCH_NAME == 'stage'){
                     echo '1. Delete All Secrets in STG. 2. Create Image build secretsin TST. 3. Create Application Secrets in TST.'
                     sh """
-                    echo 'oc project ${OS_PROJECT_FINAL}'
-                    echo 'oc delete secret "bt-helpline-secret-rails" -n ${OS_PROJECT_FINAL}'
-                    echo 'oc delete secret "bt-helpline-secret" -n ${OS_PROJECT_FINAL}'
+                    echo 'oc project ${OS_DEPLOY_PROJECT}'
+                    echo 'oc delete secret "bt-helpline-secret-rails" -n ${OS_BUILD_PROJECT}'
+                    echo 'oc delete secret "bt-helpline-secret" -n ${OS_DEPLOY_PROJECT}'
                     """      
 
                     sh """
@@ -274,9 +278,9 @@ podTemplate(
                 } else if (env.BRANCH_NAME.contains(TAG_FILTER) && COMMIT_HEAD_TAG.contains(TAG_FILTER)){
                     echo '1. Delete All Secrets. 2. Create Image build secrets. 3. Create Application Secrets.'
                     sh """
-                    echo 'oc project ${OS_PROJECT_FINAL}'
-                    echo 'oc delete secret "bt-helpline-secret-rails" -n ${OS_PROJECT_FINAL}'
-                    echo 'oc delete secret "bt-helpline-secret" -n ${OS_PROJECT_FINAL}'
+                    echo 'oc project ${OS_DEPLOY_PROJECT}'
+                    echo 'oc delete secret "bt-helpline-secret-rails" -n ${OS_BUILD_PROJECT}'
+                    echo 'oc delete secret "bt-helpline-secret" -n ${OS_DEPLOY_PROJECT}'
                     """
  
                     sh """
@@ -287,9 +291,9 @@ podTemplate(
                 } else if (env.BRANCH_NAME.contains(HOTFIX_TAG_FILTER) && COMMIT_HEAD_TAG.contains(HOTFIX_TAG_FILTER)){
                     echo '1. Delete All Secrets. 2. Create Image build secrets. 3. Create Application Secrets.'
                     sh """
-                    echo 'oc project ${OS_PROJECT_FINAL}'
-                    echo 'oc delete secret "bt-helpline-secret-rails" -n ${OS_PROJECT_FINAL}'
-                    echo 'oc delete secret "bt-helpline-secret" -n ${OS_PROJECT_FINAL}'
+                    echo 'oc project ${OS_DEPLOY_PROJECT}'
+                    echo 'oc delete secret "bt-helpline-secret-rails" -n ${OS_BUILD_PROJECT}'
+                    echo 'oc delete secret "bt-helpline-secret" -n ${OS_DEPLOY_PROJECT}'
                     """        
  
                     sh """
@@ -302,25 +306,6 @@ podTemplate(
                     echo 'Head Tag:' + COMMIT_HEAD_TAG
                     echo 'Branch Name:' + env.BRANCH_NAME
                 }
-                echo 'Probably need to build secrets in all environments.'
-            /* Real Code Below:
-            //Could parameterize secrets to Project Name
-
-            withCredentials([
-                string(credentialsId: 'psd-rails-master-key', variable: 'RAILS_MASTER_KEY'),
-                string(credentialsId: 'psd-helpline-database-password-tst', variable: 'DATABASE_PWD'),
-                string(credentialsId: 'psd-helpline-keybase', variable: 'KEYBASE')
-                ]) {
-                    container('jnlp') {
-                        sh """
-                        oc project ${OS_PROJECT_FINAL}
-                        oc delete secret "bt-helpline-secret-rails"
-                        oc create secret generic bt-helpline-secret-rails --from-literal=RAILS_MASTER_KEY="${RAILS_MASTER_KEY}"
-                        oc delete secret "bt-helpline-secret"
-                        oc create secret generic bt-helpline-secret --from-literal=database-password="${DATABASE_PWD}" --from-literal=keybase="${KEYBASE}"
-                        """
-                    }
-            */
             }
 
             stage('Build Image') {
