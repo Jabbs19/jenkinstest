@@ -375,7 +375,7 @@ podTemplate(
                         def chartVersion = chartYaml.version.toString()
                         def appVersion = chartYaml.appVersion.toString()
                         chartYaml.appVersion = env.BRANCH_NAME  +'-'+GIT_SHORT_COMMIT
-                        echo 'Current: Chartversion:'+chartVersion+'appVersion:'+appVersion+
+                        echo 'Current: Chartversion:'+chartVersion+'appVersion:'+appVersion
 
                         sh "rm -f helm/helpline/Chart.yaml"
                         writeYaml file: "helm/helpline/Chart.yaml", data: chartYaml
