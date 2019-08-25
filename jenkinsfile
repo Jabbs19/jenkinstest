@@ -422,9 +422,9 @@ podTemplate(
                 stage('Package Helm and Push to ChartMuseum'){
                     if(env.BRANCH_NAME == 'master') {
                         sh """"
-                        echo 'sh helm package ${HELM_CHART_LOCATION} -d ${HELM_TGZ_DEST_DIR}'
+                        echo 'helm package ${HELM_CHART_LOCATION} -d ${HELM_TGZ_DEST_DIR}'
                         """
-                        HELM_TGZ_PACKAGE_FINAL = HELM_CHARTNAME + '-'+ chartVersion + '.tgz.'
+                        HELM_TGZ_PACKAGE_FINAL = HELM_CHARTNAME + '-' + chartVersion + '.tgz'
                         echo 'Helm .tgz Package: ' + HELM_TGZ_PACKAGE_FINAL
 
                         sh """
