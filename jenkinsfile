@@ -349,7 +349,7 @@ podTemplate(
                     echo 'Initialize Helm Client and Check tiller access'
                     
                     sh """
-                    echo '"'helm init --client-only'
+                    echo 'helm init --client-only'
                     echo 'helm version --tiller-namespace ${HELM_TILLER_NAMESPACE}'
                     """
                 }
