@@ -426,20 +426,21 @@ podTemplate(
                         writeYaml file: "helm/helpline/values.yaml", data: valuesYaml
                         writeYaml file: "helm/helpline/Chart.yaml", data: chartYaml
                     } 
-                    stage('Package Helm and Push to ChartMuseum'){
-                        if(env.BRANCH_NAME == 'master') {
-                            sh """"
-                            echo 'sh helm package ${HELM_CHART_LOCATION} -d ${HELM_TGZ_DEST_DIR}'
-                            """
-                            HELM_TGZ_PACKAGE_FINAL = ${HELM_CHARTNAME} + '-'+ chartVersion + '.tgz.'
-                            echo 'Helm .tgz Package: ' + HELM_TGZ_PACKAGE_FINAL
+                }
+                stage('Package Helm and Push to ChartMuseum'){
+                    if(env.BRANCH_NAME == 'master') {
+                        sh """"
+                        echo 'sh helm package ${HELM_CHART_LOCATION} -d ${HELM_TGZ_DEST_DIR}'
+                        """
+                        HELM_TGZ_PACKAGE_FINAL = ${HELM_CHARTNAME} + '-'+ chartVersion + '.tgz.'
+                        echo 'Helm .tgz Package: ' + HELM_TGZ_PACKAGE_FINAL
 
-                            sh """
-                            echo 'curl -u admin:admin -k --data-binary ${HELM_TGZ_PACKAGE_FINAL} http://chartmuseum-chartmuseum.chartmuseum:8080/api/charts'
-                            """
+                        sh """
+                        echo 'curl -u admin:admin -k --data-binary ${HELM_TGZ_PACKAGE_FINAL} http://chartmuseum-chartmuseum.chartmuseum:8080/api/charts'
+                        """
 
-                        }
-                     }
+                    }
+                 }
                 stage ('Deploy with Helm') {
                     //Could make this a "configuration step, and just set all remaining values before a global "deploy"
                     if (env.BRANCH_NAME == 'master'){
