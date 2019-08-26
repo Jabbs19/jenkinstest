@@ -269,7 +269,7 @@ podTemplate(
             stage('Build Image') {
                 if (RELEASE_TYPE == 'develop' || \
                     RELEASE_TYPE == 'stage' || \
-                    RELEASE_TYPE == 'release' ||\
+                    RELEASE_TYPE == 'release' || \
                     RELEASE_TYPE == 'hotfix') {
                     echo 'Build on Release Type:' + RELEASE_TYPE
                     echo 'The Image Tag is set in the Build Config for this project: ' + IMAGE_BUILD_OS_PROJECT
@@ -301,7 +301,7 @@ podTemplate(
                 echo 'Delete any secrets that are not needed (maybe build secrets)'
 
             }
-            stage ('Create Application Secrets')
+            stage ('Create Application Secrets') {
                 //All Environments need these created on the fly?
                 if (RELEASE_TYPE == 'develop' || \
                     RELEASE_TYPE == 'stage' || \
@@ -382,7 +382,7 @@ podTemplate(
                             echo 'curl -u admin:admin -k --data-binary ${HELM_TGZ_PACKAGE_FINAL} http://chartmuseum-chartmuseum.chartmuseum:8080/api/charts'
                             """
                         }
-                     }
+                    }
                     stage ('Deploy with Helm') {
                         //Could make this a "configuration step, and just set all remaining values before a global "deploy"
                         if (RELEASE_TYPE == 'master'){
