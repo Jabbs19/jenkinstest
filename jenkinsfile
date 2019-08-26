@@ -177,12 +177,14 @@ podTemplate(
                 //Print Variables for Logging.
                 echo 'Display Some Variables for Logging'
                 echo 'Branch Name:' + env.BRANCH_NAME
+                echo 'Git Tag: ' + GIT_COMMIT_HEAD_TAG
+                echo 'Commit Short Hash: ' + GIT_SHORT_COMMIT
+                echo 'Release Type: ' RELEASE_TYPE
                 echo 'Build Project: ' + IMAGE_BUILD_OS_PROJECT
                 echo 'Build Image Name: ' + IMAGE_BUILD_OS_PROJECT + '/' + IMAGE_NAME + ':' + IMAGE_BUILD_TAG
                 echo 'Deploy Project: ' + DEPLOY_OS_PROJECT
                 echo 'Deploy Image Name: ' +  DEPLOY_OS_PROJECT + '/' + IMAGE_NAME + ':' + DEPLOY_IMAGE_TAG
-                echo 'Commit Tag: ' + GIT_COMMIT_HEAD_TAG
-                echo 'App Version (If Applicable): ' + APP_VERSION
+                echo 'Parsed App Version (If Applicable): ' + APP_VERSION
             }
         }
         stage('Unit Test') {
