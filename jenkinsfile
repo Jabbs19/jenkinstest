@@ -282,11 +282,10 @@ podTemplate(
                     RELEASE_TYPE == 'release' ||\
                     RELEASE_TYPE == 'hotfix') {
                     echo 'Build on ' + RELEASE_TYPE
-                    echo 'Full Image Name:' + IMAGE_BUILD_FULL_NAME
+                    echo 'Expected Build Image Name:' + IMAGE_BUILD_OS_PROJECT + '/' + IMAGE_NAME + ':' IMAGE_BUILD_TAG
+                    echo 'The Image Tag is set in the Build Config for this project: ${IMAGE_BUILD_OS_PROJECT}'
 
-                    //Image Tag is already set in BuildConfig (need "special" one for HotFix in Release Environment)
                     sh"""
-                    oc whoami
                     echo 'oc start-build "helpline-build" --from-repo="." --wait=true --follow -n ${IMAGE_BUILD_OS_PROJECT}'
                     """
                 } 
