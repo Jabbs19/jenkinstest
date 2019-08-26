@@ -234,34 +234,26 @@ podTemplate(
         }
         
         container('openshift') {
-            stage('Create Secrets') {
+            stage('Create Build Secrets') {
+                //Set whatever secrets are needed for image build.
+                    // Will need to create uniqu credentials for all environments that have unique values.
+                    // e.g. dev-rails-master-key, stg-rails-master-key, prd-rails-master-key, rel-rails-master-key
 
-            // Will need to create uniqu credentials for all environments that have unique values.
-            // e.g. dev-rails-master-key, stg-rails-master-key, prd-rails-master-key, rel-rails-master-key
-
-            /*withCredentials([
-                string(credentialsId: 'psd-rails-master-key', variable: 'RAILS_MASTER_KEY'),
-                string(credentialsId: 'psd-helpline-database-password-tst', variable: 'DATABASE_PWD'),
-                string(credentialsId: 'psd-helpline-keybase', variable: 'KEYBASE')
-                ]) {
-                    
-                    //Put all of the If else in here.
-                    }
-            */
-            //Fake Data:
+                    /*withCredentials([
+                        string(credentialsId: 'psd-rails-master-key', variable: 'RAILS_MASTER_KEY'),
+                        string(credentialsId: 'psd-helpline-database-password-tst', variable: 'DATABASE_PWD'),
+                        string(credentialsId: 'psd-helpline-keybase', variable: 'KEYBASE')
+                        ]) {
+                            
+                            //Put all of the If else in here.
+                            }
+                    */
+                    //Fake Data:
                 def RAILS_MASTER_KEY = 'rails-master-key-14njfgaht3q3tj'
                 def DATABASE_PWD = 'hereismydbapassword'
                 def KEYBASE = '75q05704319750914375093475070134901'
 
-                if (RELEASE_TYPE == 'master') {
-                    //Application Secrets
-                    sh """
-                    echo 'Deleting and Creating Application Secrets in ${DEPLOY_OS_PROJECT}'
-                    echo 'oc project ${DEPLOY_OS_PROJECT}'
-                    echo 'oc delete secret "bt-helpline-secret" -n ${DEPLOY_OS_PROJECT}'
-                    echo 'oc create secret generic bt-helpline-secret --from-literal=database-password="${DATABASE_PWD}" --from-literal=keybase="${KEYBASE}"'
-                    """ 
-                } else if (RELEASE_TYPE == 'develop' || \
+                if (RELEASE_TYPE == 'develop' || \
                     RELEASE_TYPE == 'stage' || \
                     RELEASE_TYPE == 'release' || \
                     RELEASE_TYPE == 'hotfix') {
@@ -272,17 +264,8 @@ podTemplate(
                     echo 'oc delete secret "bt-helpline-secret-rails" -n ${IMAGE_BUILD_OS_PROJECT}'
                     echo 'oc create secret generic bt-helpline-secret-rails --from-literal=RAILS_MASTER_KEY="${RAILS_MASTER_KEY}"'
                     """
-
-                    //Application Secrets
-                    sh """
-                    echo 'Deleting and Creating Application Secrets in ${DEPLOY_OS_PROJECT}'
-                    echo 'oc project ${DEPLOY_OS_PROJECT}'
-                    echo 'oc delete secret "bt-helpline-secret" -n ${DEPLOY_OS_PROJECT}'
-                    echo 'oc create secret generic bt-helpline-secret --from-literal=database-password="${DATABASE_PWD}" --from-literal=keybase="${KEYBASE}"'                    
-                    """               
                 }
             }
-
             stage('Build Image') {
                 if (RELEASE_TYPE == 'develop' || \
                     RELEASE_TYPE == 'stage' || \
@@ -317,6 +300,22 @@ podTemplate(
             stage ('Secrets Cleanup') {
                 echo 'Delete any secrets that are not needed (maybe build secrets)'
 
+            }
+            stage ('Create Application Secrets')
+                //All Environments need these created on the fly?
+                if (RELEASE_TYPE == 'develop' || \
+                    RELEASE_TYPE == 'stage' || \
+                    RELEASE_TYPE == 'release' || \
+                    RELEASE_TYPE == 'hotfix' || \
+                    RELEASE_TYPE == 'master' ) {
+                    //Application Secrets
+                    sh """
+                    echo 'Deleting and Creating Application Secrets in ${DEPLOY_OS_PROJECT}'
+                    echo 'oc project ${DEPLOY_OS_PROJECT}'
+                    echo 'oc delete secret "bt-helpline-secret" -n ${DEPLOY_OS_PROJECT}'
+                    echo 'oc create secret generic bt-helpline-secret --from-literal=database-password="${DATABASE_PWD}" --from-literal=keybase="${KEYBASE}"'
+                    """ 
+                } 
             }
         }
         if (RELEASE_TYPE != 'hotfix') {
