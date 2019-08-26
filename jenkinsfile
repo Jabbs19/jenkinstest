@@ -299,14 +299,18 @@ podTemplate(
             }
             stage('Image Management') {
                 if (RELEASE_TYPE == 'release' || RELEASE_TYPE == 'hotfix') {
-                    // This is already set in the beginning configuration section, but could be done here.
+                    //Image tags for tagging a :release/:hotfix as the Git Version number.
                     def SOURCE_TAG = REL_OS_PROJECT + '/' + IMAGE_NAME + ':' + REL_IMAGE_TAG
                     def DEST_TAG = REL_OS_PROJECT + '/' + IMAGE_NAME + ':' + GIT_PARSED_APP_VERSION
                     sh "echo 'oc tag ${SOURCE_TAG} ${DEST_TAG}'"
                 } else if (RELEASE_TYPE == 'master') {
-                    // This is already set in the beginning configuration section, but could be done here.
+                    //Image tags for tagging the image in release (by Git Version) into Production environment.
                     def SOURCE_TAG = REL_OS_PROJECT + '/' + IMAGE_NAME + ':' + GIT_PARSED_APP_VERSION
                     def DEST_TAG = PRD_OS_PROJECT + '/' + IMAGE_NAME + ':' + GIT_PARSED_APP_VERSION
+                    sh "echo 'oc tag ${SOURCE_TAG} ${DEST_TAG}'"
+                    //Image tags for tagging the Git Version image as :production
+                    SOURCE_TAG = PRD_OS_PROJECT + '/' + IMAGE_NAME + ':' + GIT_PARSED_APP_VERSION
+                    DEST_TAG = PRD_OS_PROJECT + '/' + IMAGE_NAME + ':' + PRD_IMAGE_TAG
                     sh "echo 'oc tag ${SOURCE_TAG} ${DEST_TAG}'"
                 }
             }
