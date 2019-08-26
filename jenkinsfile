@@ -25,34 +25,35 @@ def HOT_IMAGE_TAG = "hotfix"
 //def HOT_HELM_VALUES_LOC = "helm/helpline/values-hot.yaml"
 
 //Git Variables
-def REL_TAG_FILTER="release-m-"
-def HOT_TAG_FILTER = "hotfix-m-"
+def GIT_REL_TAG_FILTER="release-m-"
+def GIT_HOT_TAG_FILTER = "hotfix-m-"
+def GIT_COMMIT_HEAD_TAG = ""        //Git Tag at HEAD of Branch
+def GIT_SHORT_COMMIT = ""           //Git Short Commit (e.g. 1574ga2)
+def GIT_PARSED_APP_VERSION = ""     //Parsed AppVersion (after stripping Tag Identifiers)
 
 //Image Variables
 def IMAGE_NAME = "helpline"
+def IMAGE_BUILD_OS_PROJECT = ""     //OpenShift Project (aka Repo) (e.g. psd-helpline-tst)
+def IMAGE_BUILD_TAG = ""            //Image Tag created on Build (e.g. :test
+def IMAGE_DEPLOY_TAG = ""           //Image Tag used in Deployment (e.g. :test, or :v1.4a for some environments.)
+
 
 //Helm and Tiller Stuff
 def HELM_TILLER_NAMESPACE = 'ocp-tiller'
 def HELM_CHARTNAME = 'helpline'
 def HELM_CHART_LOCATION = 'helm/helpline'
 def HELM_TGZ_DEST_DIR = 'helm'
+def HELM_RELEASE_NAME_FINAL = ""    //Final name of Chart Release (e.g. psd-helpline-tst)
+def HELM_YAML_LOCATION_FINAL = ""   //Final YAML location (set from env variables above)
+def HELM_TGZ_PACKAGE_FINAL = ""     //Final full path for TGZ file (e.g. helm/helpline-0.4.0.tgz)
+def HELM_CHART_VERSION = ""         //Global variables used for current/set Chart Version (e.g. 0.4.0)
+def HELM_APP_VERSION_FINAL = ""     //Used when setting the Chart.yaml appVersion to either Tag Version or Branch-ShortCommit
 
-//Global "to-be-assigned" Variables
-def IMAGE_BUILD_OS_PROJECT = ""     //OpenShift Project (aka Repo) (e.g. psd-helpline-tst)
-def IMAGE_BUILD_TAG = ""            //Tag Name for Image (e.g. :test
-def DEPLOY_IMAGE_TAG = ""
+//Generic or Operational Variables
 def DEPLOY_OS_PROJECT = ""          //Project that the image will be pulled from for deployment.
 def RELEASE_TYPE = ""               //Branch name, with tags mapped to an easy-to-read name (e.g. release, hotfix)
-def GIT_COMMIT_HEAD_TAG = ""
-def GIT_SHORT_COMMIT = ""
-def GIT_PARSED_APP_VERSION = ""
-def HELM_RELEASE_NAME_FINAL = ""
-def HELM_YAML_LOCATION_FINAL = ""
-def HELM_TGZ_PACKAGE_FINAL = ""
-def HELM_CHART_VERSION = ""
-def HELM_APP_VERSION_FINAL = ""
 
-      //Project that image will be built/tagged to.
+
 
 podTemplate(
     label: label,
@@ -64,8 +65,6 @@ podTemplate(
         containerTemplate(name: 'openshift', image: 'docker-registry.default.svc:5000/openshift/openshift-cli', ttyEnabled: true, command: 'cat'),
         containerTemplate(name: 'docker', image: 'docker', ttyEnabled: true, command: 'cat'),
         containerTemplate(name: 'ruby', image: 'ruby:2.5.5', ttyEnabled: true, command: 'cat')
-
-    
     ]
 ) {
     node(label) {
@@ -82,12 +81,12 @@ podTemplate(
                 checkout scm
                 GIT_COMMIT_HEAD_TAG = sh(returnStdout: true, script: "git tag -l --points-at HEAD | tail -1").trim()
                 GIT_SHORT_COMMIT = sh(returnStdout: true, script: "git rev-parse --short HEAD | tail -1").trim()
-                //Build "App Version"
+                //Parse "App Version"
                 if (GIT_COMMIT_HEAD_TAG != "") {
-                    if (GIT_COMMIT_HEAD_TAG.substring(0,REL_TAG_FILTER.length()) == REL_TAG_FILTER) {
-                        GIT_PARSED_APP_VERSION = GIT_COMMIT_HEAD_TAG.substring(REL_TAG_FILTER.length(),GIT_COMMIT_HEAD_TAG.length())
-                    } else if (GIT_COMMIT_HEAD_TAG.substring(0,HOT_TAG_FILTER.length()) == HOT_TAG_FILTER) {
-                        GIT_PARSED_APP_VERSION = GIT_COMMIT_HEAD_TAG.substring(HOT_TAG_FILTER.length(),GIT_COMMIT_HEAD_TAG.length())
+                    if (GIT_COMMIT_HEAD_TAG.substring(0,GIT_REL_TAG_FILTER.length()) == GIT_REL_TAG_FILTER) {
+                        GIT_PARSED_APP_VERSION = GIT_COMMIT_HEAD_TAG.substring(GIT_REL_TAG_FILTER.length(),GIT_COMMIT_HEAD_TAG.length())
+                    } else if (GIT_COMMIT_HEAD_TAG.substring(0,GIT_HOT_TAG_FILTER.length()) == GIT_HOT_TAG_FILTER) {
+                        GIT_PARSED_APP_VERSION = GIT_COMMIT_HEAD_TAG.substring(GIT_HOT_TAG_FILTER.length(),GIT_COMMIT_HEAD_TAG.length())
                     } else {
                         GIT_PARSED_APP_VERSION = ""
                     }
@@ -101,7 +100,7 @@ podTemplate(
                     echo 'Executing on Master'
                     RELEASE_TYPE = 'master'
                     DEPLOY_OS_PROJECT = PRD_OS_PROJECT
-                    DEPLOY_IMAGE_TAG = GIT_PARSED_APP_VERSION
+                    IMAGE_DEPLOY_TAG = GIT_PARSED_APP_VERSION
                     HELM_RELEASE_NAME_FINAL = HELM_CHARTNAME + '-prd'
                     HELM_YAML_LOCATION_FINAL = PRD_HELM_VALUES_LOC
                     //Tags for Master Release Checks.  Could add more filters, sig checks, etc.
@@ -116,7 +115,7 @@ podTemplate(
                     IMAGE_BUILD_OS_PROJECT = DEV_OS_PROJECT
                     IMAGE_BUILD_TAG = DEV_IMAGE_TAG
                     DEPLOY_OS_PROJECT = DEV_OS_PROJECT
-                    DEPLOY_IMAGE_TAG = DEV_IMAGE_TAG
+                    IMAGE_DEPLOY_TAG = DEV_IMAGE_TAG
                     HELM_YAML_LOCATION_FINAL = DEV_HELM_VALUES_LOC
                     HELM_RELEASE_NAME_FINAL = HELM_CHARTNAME + '-dev'
                     HELM_APP_VERSION_FINAL = RELEASE_TYPE + '-' + GIT_SHORT_COMMIT
@@ -127,18 +126,18 @@ podTemplate(
                     IMAGE_BUILD_OS_PROJECT = STG_OS_PROJECT
                     IMAGE_BUILD_TAG = STG_IMAGE_TAG
                     DEPLOY_OS_PROJECT = STG_OS_PROJECT
-                    DEPLOY_IMAGE_TAG = STG_IMAGE_TAG
+                    IMAGE_DEPLOY_TAG = STG_IMAGE_TAG
                     HELM_YAML_LOCATION_FINAL = STG_HELM_VALUES_LOC
                     HELM_RELEASE_NAME_FINAL = HELM_CHARTNAME + '-stg'
                     HELM_APP_VERSION_FINAL = RELEASE_TYPE + '-' + GIT_SHORT_COMMIT
 
-                } else if (env.BRANCH_NAME.contains(REL_TAG_FILTER) && GIT_COMMIT_HEAD_TAG.contains(REL_TAG_FILTER)){
-                    echo 'Execute on specific "Release" Tag of:' + REL_TAG_FILTER
+                } else if (env.BRANCH_NAME.contains(GIT_REL_TAG_FILTER) && GIT_COMMIT_HEAD_TAG.contains(GIT_REL_TAG_FILTER)){
+                    echo 'Execute on specific "Release" Tag of:' + GIT_REL_TAG_FILTER
                     RELEASE_TYPE = 'release'
                     IMAGE_BUILD_OS_PROJECT = REL_OS_PROJECT
                     IMAGE_BUILD_TAG = REL_IMAGE_TAG
                     DEPLOY_OS_PROJECT = REL_OS_PROJECT
-                    DEPLOY_IMAGE_TAG = GIT_PARSED_APP_VERSION
+                    IMAGE_DEPLOY_TAG = GIT_PARSED_APP_VERSION
                     HELM_YAML_LOCATION_FINAL = REL_HELM_VALUES_LOC
                     HELM_RELEASE_NAME_FINAL = HELM_CHARTNAME + '-rel'
 
@@ -148,13 +147,13 @@ podTemplate(
                     HELM_APP_VERSION_FINAL = GIT_PARSED_APP_VERSION
                     }
 
-                } else if (env.BRANCH_NAME.contains(HOT_TAG_FILTER) && GIT_COMMIT_HEAD_TAG.contains(HOT_TAG_FILTER)){
-                    echo 'Execute on specific "HotFix" Tag of:' + HOT_TAG_FILTER
+                } else if (env.BRANCH_NAME.contains(GIT_HOT_TAG_FILTER) && GIT_COMMIT_HEAD_TAG.contains(GIT_HOT_TAG_FILTER)){
+                    echo 'Execute on specific "HotFix" Tag of:' + GIT_HOT_TAG_FILTER
                     RELEASE_TYPE = 'hotfix'
                     IMAGE_BUILD_OS_PROJECT = REL_OS_PROJECT
                     IMAGE_BUILD_TAG = HOT_IMAGE_TAG
                     DEPLOY_OS_PROJECT = REL_OS_PROJECT                  //Doesn't actually deploy.
-                    DEPLOY_IMAGE_TAG = GIT_PARSED_APP_VERSION
+                    IMAGE_DEPLOY_TAG = GIT_PARSED_APP_VERSION
                     HELM_YAML_LOCATION_FINAL = PRD_HELM_VALUES_LOC
                     HELM_RELEASE_NAME_FINAL = HELM_CHARTNAME + '-hot'  //Doesn't actually deploy or use helm.
                     if (GIT_COMMIT_HEAD_TAG == "") {
@@ -180,7 +179,7 @@ podTemplate(
                 echo 'Build Project: ' + IMAGE_BUILD_OS_PROJECT
                 echo 'Build Image Name: ' + IMAGE_BUILD_OS_PROJECT + '/' + IMAGE_NAME + ':' + IMAGE_BUILD_TAG
                 echo 'Deploy Project: ' + DEPLOY_OS_PROJECT
-                echo 'Deploy Image Name: ' +  DEPLOY_OS_PROJECT + '/' + IMAGE_NAME + ':' + DEPLOY_IMAGE_TAG
+                echo 'Deploy Image Name: ' +  DEPLOY_OS_PROJECT + '/' + IMAGE_NAME + ':' + IMAGE_DEPLOY_TAG
                 echo 'Parsed App Version (If Applicable): ' + GIT_PARSED_APP_VERSION
             }
         }
@@ -194,24 +193,18 @@ podTemplate(
                     echo 'No Unit Test'
                 } else if (RELEASE_TYPE == 'release'){
                     echo 'Execute Unit Tests'
+                    //Should this be parameterized for RAILS_ENV
+
+                    //Fake Data:
+                    def RAILS_MASTER_KEY = '4174071407141'
+
                     sh """
-                    ruby -v
+                    echo 'bundle install'
+                    echo 'rake db:create RAILS_ENV=test'
+                    echo 'rake db:migrate RAILS_ENV=test'
+                    echo 'RAILS_MASTER_KEY=${RAILS_MASTER_KEY} rake db:test:prepare'
+                    echo 'RAILS_MASTER_KEY=${RAILS_MASTER_KEY} rspec'
                     """
-                    /* Real Code
-                    withCredentials([string(credentialsId: 'psd-rails-master-key', variable: 'RAILS_MASTER_KEY')]) {
-                        container('ruby') {
-                          sh """
-                            bundle install
-                    printenv
-                            rake db:create RAILS_ENV=test
-                            rake db:migrate RAILS_ENV=test
-                    printenv
-                            RAILS_MASTER_KEY=${RAILS_MASTER_KEY} rake db:test:prepare
-                            RAILS_MASTER_KEY=${RAILS_MASTER_KEY} rspec
-                            """
-                        }
-                    }
-                    */
                 } else if (RELEASE_TYPE == 'hotfix'){
                     echo 'No Unit Test'
                 } 
@@ -383,9 +376,9 @@ podTemplate(
                         def valuesYaml = readYaml file: 'helm/helpline/values.yaml'
                         def currentImage = valuesYaml.images.apiTag.toString()
                         echo 'Current Helm Image Tag in File: '+currentImage
-                        echo 'New Helm Image Tag for Deployment: ' + DEPLOY_IMAGE_TAG
+                        echo 'New Helm Image Tag for Deployment: ' + IMAGE_DEPLOY_TAG
                         //Overwrite Values
-                        valuesYaml.images.apiTag = DEPLOY_IMAGE_TAG
+                        valuesYaml.images.apiTag = IMAGE_DEPLOY_TAG
                         //Overwrite file
                         sh "rm -f helm/helpline/values.yaml"
                         writeYaml file: "helm/helpline/values.yaml", data: valuesYaml
@@ -407,7 +400,7 @@ podTemplate(
                 stage ('Deploy with Helm') {
                     //Could make this a "configuration step, and just set all remaining values before a global "deploy"
                     if (RELEASE_TYPE == 'master'){
-                        echo 'Deploy with helm to ' + DEPLOY_OS_PROJECT + ' with tag:' + DEPLOY_IMAGE_TAG
+                        echo 'Deploy with helm to ' + DEPLOY_OS_PROJECT + ' with tag:' + IMAGE_DEPLOY_TAG
 
                         //Set Full path of TGZ
                         def TGZ_PATH = HELM_TGZ_DEST_DIR + '/' + HELM_TGZ_PACKAGE_FINAL 
@@ -421,12 +414,12 @@ podTemplate(
                         --tiller-namespace ${HELM_TILLER_NAMESPACE} \
                         -f ${HELM_YAML_LOCATION_FINAL} \
                         --set image.apiRepository=${DEPLOY_OS_PROJECT}
-                        --set image.apiTag=${DEPLOY_IMAGE_TAG} \
+                        --set image.apiTag=${IMAGE_DEPLOY_TAG} \
                         ''
                         """
                         sh 'helm --help'
                     } else if (RELEASE_TYPE == 'develop' || RELEASE_TYPE == 'stage' || RELEASE_TYPE == 'release') {
-                        echo 'Deploy with helm to ' + DEPLOY_OS_PROJECT + ' with tag:' + DEPLOY_IMAGE_TAG
+                        echo 'Deploy with helm to ' + DEPLOY_OS_PROJECT + ' with tag:' + IMAGE_DEPLOY_TAG
 
                         sh """
                         echo 'helm upgrade --install ${HELM_RELEASE_NAME_FINAL} \
@@ -435,7 +428,7 @@ podTemplate(
                         --tiller-namespace ${HELM_TILLER_NAMESPACE} \
                         -f ${HELM_YAML_LOCATION_FINAL} \
                         --set images.apiRepository=${DEPLOY_OS_PROJECT} \
-                        --set images.apiTag=${DEPLOY_IMAGE_TAG} \
+                        --set images.apiTag=${IMAGE_DEPLOY_TAG} \
                         '
                         """
                     } else if (RELEASE_TYPE == 'hotfix') {
@@ -477,9 +470,9 @@ podTemplate(
                     echo 'Post Deploy Jobs for Develop'
                 } else if (RELEASE_TYPE == 'stage'){
                     echo 'Post Deploy Jobs for Stage'
-                } else if (RELEASE_TYPE.contains(REL_TAG_FILTER) && GIT_COMMIT_HEAD_TAG.contains(REL_TAG_FILTER)){
+                } else if (RELEASE_TYPE.contains(GIT_REL_TAG_FILTER) && GIT_COMMIT_HEAD_TAG.contains(GIT_REL_TAG_FILTER)){
                     echo 'Post Deploy Jobs for Release'
-                } else if (RELEASE_TYPE.contains(HOT_TAG_FILTER) && GIT_COMMIT_HEAD_TAG.contains(HOT_TAG_FILTER)){
+                } else if (RELEASE_TYPE.contains(GIT_HOT_TAG_FILTER) && GIT_COMMIT_HEAD_TAG.contains(GIT_HOT_TAG_FILTER)){
                     echo 'Post Deploy Jobs for HotFix'
                 } 
             }
@@ -492,9 +485,9 @@ podTemplate(
                     echo 'No Update'
                 } else if (RELEASE_TYPE == 'stage'){
                     echo 'No Update'
-                } else if (RELEASE_TYPE.contains(REL_TAG_FILTER) && GIT_COMMIT_HEAD_TAG.contains(REL_TAG_FILTER)){
+                } else if (RELEASE_TYPE.contains(GIT_REL_TAG_FILTER) && GIT_COMMIT_HEAD_TAG.contains(GIT_REL_TAG_FILTER)){
                     echo 'JIRA Update of Issue/Ticket that its available for Testing'
-                } else if (RELEASE_TYPE.contains(HOT_TAG_FILTER) && GIT_COMMIT_HEAD_TAG.contains(HOT_TAG_FILTER)){
+                } else if (RELEASE_TYPE.contains(GIT_HOT_TAG_FILTER) && GIT_COMMIT_HEAD_TAG.contains(GIT_HOT_TAG_FILTER)){
                     echo 'No Update'
                 } 
             }
