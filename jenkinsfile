@@ -415,7 +415,7 @@ podTemplate(
                         -f ${HELM_YAML_LOCATION_FINAL} \
                         --set image.apiRepository=${DEPLOY_OS_PROJECT}
                         --set image.apiTag=${IMAGE_DEPLOY_TAG} \
-                        ''
+                        '
                         """
                         sh 'helm --help'
                     } else if (RELEASE_TYPE == 'develop' || RELEASE_TYPE == 'stage' || RELEASE_TYPE == 'release') {
