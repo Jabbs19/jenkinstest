@@ -248,7 +248,7 @@ podTemplate(
                             //Put all of the If else in here.
                             }
                     */
-                    //Fake Data:
+                //Fake Data:
                 def RAILS_MASTER_KEY = 'rails-master-key-14njfgaht3q3tj'
                 def DATABASE_PWD = 'hereismydbapassword'
                 def KEYBASE = '75q05704319750914375093475070134901'
@@ -303,6 +303,12 @@ podTemplate(
             }
             stage ('Create Application Secrets') {
                 //All Environments need these created on the fly?
+
+                //Fake Data:
+                def RAILS_MASTER_KEY = 'rails-master-key-14njfgaht3q3tj'
+                def DATABASE_PWD = 'hereismydbapassword'
+                def KEYBASE = '75q05704319750914375093475070134901'
+
                 if (RELEASE_TYPE == 'develop' || \
                     RELEASE_TYPE == 'stage' || \
                     RELEASE_TYPE == 'release' || \
