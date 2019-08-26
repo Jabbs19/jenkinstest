@@ -38,9 +38,9 @@ def HELM_CHART_LOCATION = 'helm/helpline'
 def HELM_TGZ_DEST_DIR = 'helm'
 
 //Global "to-be-assigned" Variables
-def IMAGE_BUILD_OS_PROJECT = ""     //e.g. psd-helpline-tst
-def IMAGE_BUILD_TAG = ""            //:test
-def IMAGE_BUILD_FULL_NAME = ""      //Full Image Name Image 
+def IMAGE_BUILD_OS_PROJECT = ""     //OpenShift Project (aka Repo) (e.g. psd-helpline-tst)
+def IMAGE_BUILD_TAG = ""            //Tag Name for Image (e.g. :test
+def IMAGE_BUILD_FULL_NAME = ""      //Full Image Name Image (e.g. psd-hepline-tst/helpline:test) 
 def IMAGE_BUILD_SECONDARY_TAG = ""  //Additional tags to be applied after Build
 def DEPLOY_IMAGE_TAG = ""
 def DEPLOY_IMAGE_NAME = ""
@@ -244,11 +244,13 @@ podTemplate(
                     //Put all of the If else in here.
                     }
             */
+            //Fake Data:
                 def RAILS_MASTER_KEY = 'rails-master-key-14njfgaht3q3tj'
                 def DATABASE_PWD = 'hereismydbapassword'
                 def KEYBASE = '75q05704319750914375093475070134901'
 
                 if (env.BRANCH_NAME == 'master') {
+                    //No Build secret, just Application/Deployment Secret
                     echo '1. Delete All Secrets in PRD. 2. Create Application Secrets in PRD.'
                     sh """
                     echo 'oc project ${DEPLOY_OS_PROJECT}'
@@ -258,7 +260,11 @@ podTemplate(
                     sh """
                     echo 'oc create secret generic bt-helpline-secret --from-literal=database-password="${DATABASE_PWD}" --from-literal=keybase="${KEYBASE}"'
                     """ 
-                } else if (env.BRANCH_NAME == 'develop'){
+                } else if (env.BRANCH_NAME == 'develop' || env.BRANCH_NAME == 'stage' || (env.BRANCH_NAME.contains(REL_TAG_FILTER) \
+                    && GIT_COMMIT_HEAD_TAG.contains(REL_TAG_FILTER)) || (env.BRANCH_NAME.contains(REL_TAG_FILTER) \
+                    && GIT_COMMIT_HEAD_TAG.contains(REL_TAG_FILTER)) {
+                    //Both Build and Application/Deployment Secret
+                    
                     echo '1. Delete All Secrets in TST. 2. Create Image build secretsin TST. 3. Create Application Secrets in TST.'
                     sh """
                     echo 'oc project ${DEPLOY_OS_PROJECT}'
@@ -270,45 +276,7 @@ podTemplate(
                     echo 'oc create secret generic bt-helpline-secret-rails --from-literal=RAILS_MASTER_KEY="${RAILS_MASTER_KEY}"'
                     echo 'oc create secret generic bt-helpline-secret --from-literal=database-password="${DATABASE_PWD}" --from-literal=keybase="${KEYBASE}"'                    
                     """ 
-                } else if (env.BRANCH_NAME == 'stage'){
-                    echo '1. Delete All Secrets in STG. 2. Create Image build secretsin TST. 3. Create Application Secrets in TST.'
-                    sh """
-                    echo 'oc project ${DEPLOY_OS_PROJECT}'
-                    echo 'oc delete secret "bt-helpline-secret-rails" -n ${IMAGE_BUILD_OS_PROJECT}'
-                    echo 'oc delete secret "bt-helpline-secret" -n ${DEPLOY_OS_PROJECT}'
-                    """      
-
-                    sh """
-                    echo 'oc create secret generic bt-helpline-secret-rails --from-literal=RAILS_MASTER_KEY="${RAILS_MASTER_KEY}"'
-                    echo 'oc create secret generic bt-helpline-secret --from-literal=database-password="${DATABASE_PWD}" --from-literal=keybase="${KEYBASE}"'                    
-                    """ 
-
-                } else if (env.BRANCH_NAME.contains(REL_TAG_FILTER) && GIT_COMMIT_HEAD_TAG.contains(REL_TAG_FILTER)){
-                    echo '1. Delete All Secrets. 2. Create Image build secrets. 3. Create Application Secrets.'
-                    sh """
-                    echo 'oc project ${DEPLOY_OS_PROJECT}'
-                    echo 'oc delete secret "bt-helpline-secret-rails" -n ${IMAGE_BUILD_OS_PROJECT}'
-                    echo 'oc delete secret "bt-helpline-secret" -n ${DEPLOY_OS_PROJECT}'
-                    """
- 
-                    sh """
-                    echo 'oc create secret generic bt-helpline-secret-rails --from-literal=RAILS_MASTER_KEY="${RAILS_MASTER_KEY}"'
-                    echo 'oc create secret generic bt-helpline-secret --from-literal=database-password="${DATABASE_PWD}" --from-literal=keybase="${KEYBASE}"'                  
-                    """ 
-                    
-                } else if (env.BRANCH_NAME.contains(HOT_TAG_FILTER) && GIT_COMMIT_HEAD_TAG.contains(HOT_TAG_FILTER)){
-                    echo '1. Delete All Secrets. 2. Create Image build secrets. 3. Create Application Secrets.'
-                    sh """
-                    echo 'oc project ${DEPLOY_OS_PROJECT}'
-                    echo 'oc delete secret "bt-helpline-secret-rails" -n ${IMAGE_BUILD_OS_PROJECT}'
-                    echo 'oc delete secret "bt-helpline-secret" -n ${DEPLOY_OS_PROJECT}'
-                    """
- 
-                    sh """
-                    echo 'oc create secret generic bt-helpline-secret-rails --from-literal=RAILS_MASTER_KEY="${RAILS_MASTER_KEY}"''
-                    echo 'oc create secret generic bt-helpline-secret --from-literal=database-password="${DATABASE_PWD}" --from-literal=keybase="${KEYBASE}"''                   
-                    """ 
-                } 
+                }
             }
 
             stage('Build Image') {
