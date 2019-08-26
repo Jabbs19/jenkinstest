@@ -340,8 +340,8 @@ podTemplate(
                         if (RELEASE_TYPE == 'develop' || \
                             RELEASE_TYPE == 'stage' || \
                             RELEASE_TYPE == 'release' || \
-                            RELEASE_TYPE == 'master' \
-                            ) {
+                            RELEASE_TYPE == 'master' ) {
+
                             //Version the AppVersion.  Just cosmetic, so that Helm will display what's currently deployed.
                             def chartYaml = readYaml file: 'helm/helpline/Chart.yaml'
                             def appVersion = chartYaml.appVersion.toString()
@@ -349,9 +349,9 @@ podTemplate(
 
                             echo 'Current Helm AppVersion in File: ' + appVersion
                             echo 'Current Helm Chart Version in File: ' + HELM_CHART_VERSION    //Used for Master                            
+                            echo 'New Helm AppVersion for Deployment: ' + HELM_APP_VERSION_FINAL
 
                             //Overwrite value.
-                            echo 'New Helm AppVersion for Deployment: ' + HELM_APP_VERSION_FINAL
                             chartYaml.appVersion = HELM_APP_VERSION_FINAL
 
                             sh "rm -f helm/helpline/Chart.yaml"
@@ -407,7 +407,7 @@ podTemplate(
                             
                             echo 'Deploy Production with helm to ' + DEPLOY_OS_PROJECT + ' with tag:' + DEPLOY_IMAGE_TAG
                             sh 'helm --help'
-                        } else if (RELEASE_TYPE == 'develop' || RELEASE_TYPE == 'stage' || RELEASE_TYPE == 'release'){
+                        } else if (RELEASE_TYPE == 'develop' || RELEASE_TYPE == 'stage' || RELEASE_TYPE == 'release') {
                             echo 'Deploy with helm to ' + DEPLOY_OS_PROJECT + ' with tag:' + DEPLOY_IMAGE_TAG
 
                             sh """
