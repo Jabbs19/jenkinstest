@@ -337,10 +337,6 @@ podTemplate(
                         echo 'helm lint ${HELM_CHART_LOCATION}'
                         """
                     }
-                    stage('Helm App Versioning') {
-                        if (RELEASE_TYPE == 'develop' || RELEASE_TYPE == 'stage') {
-
-                    }
                     stage('Helm Chart Versioning') {
                         if (RELEASE_TYPE == 'develop' || \
                             RELEASE_TYPE == 'stage' || \
@@ -361,7 +357,6 @@ podTemplate(
 
                             sh "rm -f helm/helpline/Chart.yaml"
                             writeYaml file: "helm/helpline/Chart.yaml", data: chartYaml
-
                         }
                     }
                     stage('Helm Values Versioning') {
@@ -374,9 +369,7 @@ podTemplate(
 
                             sh "rm -f helm/helpline/values.yaml"
                             writeYaml file: "helm/helpline/values.yaml", data: valuesYaml
-
                         }
-
                     }
                     stage('Package Helm and Push to ChartMuseum'){
                         if(RELEASE_TYPE == 'master') {
@@ -389,7 +382,6 @@ podTemplate(
                             sh """
                             echo 'curl -u admin:admin -k --data-binary ${HELM_TGZ_PACKAGE_FINAL} http://chartmuseum-chartmuseum.chartmuseum:8080/api/charts'
                             """
-
                         }
                      }
                     stage ('Deploy with Helm') {
