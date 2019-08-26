@@ -260,8 +260,9 @@ podTemplate(
                     sh """
                     echo 'oc create secret generic bt-helpline-secret --from-literal=database-password="${DATABASE_PWD}" --from-literal=keybase="${KEYBASE}"'
                     """ 
-                } else if (env.BRANCH_NAME == 'develop' || env.BRANCH_NAME == 'stage' || (env.BRANCH_NAME.contains(REL_TAG_FILTER) \
-                    && GIT_COMMIT_HEAD_TAG.contains(REL_TAG_FILTER)) || (env.BRANCH_NAME.contains(REL_TAG_FILTER) \
+                } else if (env.BRANCH_NAME == 'develop' || env.BRANCH_NAME == 'stage' || \
+                    (env.BRANCH_NAME.contains(REL_TAG_FILTER) && GIT_COMMIT_HEAD_TAG.contains(REL_TAG_FILTER)) || \
+                    (env.BRANCH_NAME.contains(REL_TAG_FILTER) \
                     && GIT_COMMIT_HEAD_TAG.contains(REL_TAG_FILTER)) {
                     //Both Build and Application/Deployment Secret
                     
