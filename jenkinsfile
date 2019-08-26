@@ -102,7 +102,7 @@ podTemplate(
                 echo 'Set Branch Variables Branch:'
                 if (env.BRANCH_NAME == 'master') {
                     echo 'Executing on Master'
-                    RELEASE_TYPE = env.BRANCH_NAME
+                    RELEASE_TYPE = 'master'
                     IMAGE_BUILD_OS_PROJECT = ""
                     IMAGE_BUILD_TAG = ""
                     DEPLOY_OS_PROJECT = PRD_OS_PROJECT
@@ -117,7 +117,7 @@ podTemplate(
                     } 
                 } else if (env.BRANCH_NAME == 'develop'){
                     echo 'Execute on Develop'
-                    RELEASE_TYPE = env.BRANCH_NAME
+                    RELEASE_TYPE = 'develop'
                     IMAGE_BUILD_OS_PROJECT = DEV_OS_PROJECT
                     IMAGE_BUILD_TAG = DEV_IMAGE_TAG
                     DEPLOY_OS_PROJECT = DEV_OS_PROJECT
@@ -128,7 +128,7 @@ podTemplate(
 
                 } else if (env.BRANCH_NAME == 'stage'){
                     echo 'Execute on Stage'
-                    RELEASE_TYPE = env.BRANCH_NAME
+                    RELEASE_TYPE = 'stage'
                     IMAGE_BUILD_OS_PROJECT = STG_OS_PROJECT
                     IMAGE_BUILD_TAG = STG_IMAGE_TAG
                     DEPLOY_OS_PROJECT = STG_OS_PROJECT
