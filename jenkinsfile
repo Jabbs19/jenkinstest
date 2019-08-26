@@ -53,6 +53,7 @@ def HELM_YAML_LOCATION_FINAL = ""
 def HELM_TGZ_PACKAGE_FINAL = ""
 def APP_VERSION = ""
 def HELM_CHART_VERSION = ""
+
       //Project that image will be built/tagged to.
 
 podTemplate(
@@ -179,7 +180,7 @@ podTemplate(
                 echo 'Branch Name:' + env.BRANCH_NAME
                 echo 'Git Tag: ' + GIT_COMMIT_HEAD_TAG
                 echo 'Commit Short Hash: ' + GIT_SHORT_COMMIT
-                echo 'Release Type: ' RELEASE_TYPE
+                echo 'Release Type: ' + RELEASE_TYPE
                 echo 'Build Project: ' + IMAGE_BUILD_OS_PROJECT
                 echo 'Build Image Name: ' + IMAGE_BUILD_OS_PROJECT + '/' + IMAGE_NAME + ':' + IMAGE_BUILD_TAG
                 echo 'Deploy Project: ' + DEPLOY_OS_PROJECT
@@ -307,11 +308,15 @@ podTemplate(
                     echo 'Tag Image as ' + IMAGE_BUILD_SECONDARY_TAG + 'also'
                     // This is already set in the beginning configuration section, but could be done here.
                     //IMAGE_BUILD_SECONDARY_TAG = REL_OS_PROJECT + '/' + IMAGE_NAME + ':' + APP_VERSION
-                    sh "echo 'oc tag ${IMAGE_BUILD_FULL_NAME} ${IMAGE_BUILD_SECONDARY_TAG}'"
+                    def SOURCE_TAG = REL_OS_PROJECT + '/' + IMAGE_NAME + ':' + REL_IMAGE_TAG
+                    def DEST_TAG = REL_OS_PROJECT + '/' + IMAGE_NAME + ':' + APP_VERSION
+                    sh "echo 'oc tag ${SOURCE_TAG} ${DEST_TAG}'"
                 } else if (RELEASE_TYPE == 'master') {
                     // This is already set in the beginning configuration section, but could be done here.
                     //IMAGE_BUILD_SECONDARY_TAG = PRD_OS_PROJECT + '/' + IMAGE_NAME + ':' + APP_VERSION
-                    sh "echo 'oc tag ${IMAGE_BUILD_FULL_NAME} ${IMAGE_BUILD_SECONDARY_TAG}'"
+                    def SOURCE_TAG = REL_OS_PROJECT + '/' + IMAGE_NAME + ':' + APP_VERSION
+                    def DEST_TAG = PRD_OS_PROJECT + '/' + IMAGE_NAME + ':' + APP_VERSION
+                    sh "echo 'oc tag ${SOURCE_TAG} ${DEST_TAG}'"
                 }
             }
             stage ('Secrets Cleanup') {
