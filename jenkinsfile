@@ -333,7 +333,7 @@ podTemplate(
             }
         }
         //What environments will Deploy? (Can always filter further later.)
-        if RELEASE_TYPE == 'develop' || \
+        if (RELEASE_TYPE == 'develop' || \
             RELEASE_TYPE == 'stage' || \
             RELEASE_TYPE == 'release' || \
             RELEASE_TYPE == 'master' ) {
