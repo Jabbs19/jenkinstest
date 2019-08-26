@@ -339,114 +339,110 @@ podTemplate(
                 } 
             }
         }
-        if (RELEASE_TYPE != 'hotfix') {
-            stage('Deploy Application') {
-                container('helm') {
-                    stage('Initialize Helm') {
-                        echo 'Initialize Helm Client and Check tiller access'
+        //What environments will Deploy? (Can always filter further later.)
+        if RELEASE_TYPE == 'develop' || \
+            RELEASE_TYPE == 'stage' || \
+            RELEASE_TYPE == 'release' || \
+            RELEASE_TYPE == 'master' ) {
+            container('helm') {
+                stage('Initialize Helm') {
+                    echo 'Initialize Helm Client and Check tiller access'
+                    
+                    sh """
+                    echo 'helm init --client-only'
+                    echo 'helm version --tiller-namespace ${HELM_TILLER_NAMESPACE}'
+                    """
+                }
+                stage('Helm Lint Tests') {
+                    echo 'Run Helm Lint Test'
+
+                    sh """
+                    echo 'helm lint ${HELM_CHART_LOCATION}'
+                    """
+                }
+                stage('Helm Chart.yaml Processing and Versioning') {
+                    //Don't have to do AppVersion for all branches.
+                    //Version the AppVersion.  Just cosmetic, so that Helm will display what's currently deployed.
+                    def chartYaml = readYaml file: 'helm/helpline/Chart.yaml'
+                    def appVersion = chartYaml.appVersion.toString()
+                    HELM_CHART_VERSION = chartYaml.version.toString()
+
+                    echo 'Current Helm AppVersion in File: ' + appVersion
+                    echo 'Current Helm Chart Version in File: ' + HELM_CHART_VERSION    //Used for Master                            
+                    echo 'New Helm AppVersion for Deployment: ' + HELM_APP_VERSION_FINAL
+                    //Overwrite value.
+                    chartYaml.appVersion = HELM_APP_VERSION_FINAL
+                    //Overwrite file
+                    sh "rm -f helm/helpline/Chart.yaml"
+                    writeYaml file: "helm/helpline/Chart.yaml", data: chartYaml
+                }
+                stage('Helm Values Versioning') {
+                    //Modify Image Tag in deployment (this will just have the value hardcoded in manfiests)
+                    //Also cosmetic, as the --set image will save these values historically as well.
+                    if (RELEASE_TYPE == 'master') {
+                        def valuesYaml = readYaml file: 'helm/helpline/values.yaml'
+                        def currentImage = valuesYaml.images.apiTag.toString()
+                        echo 'Current Helm Image Tag in File: '+currentImage
+                        echo 'New Helm Image Tag for Deployment: ' + DEPLOY_IMAGE_TAG
+                        //Overwrite Values
+                        valuesYaml.images.apiTag = DEPLOY_IMAGE_TAG
+                        //Overwrite file
+                        sh "rm -f helm/helpline/values.yaml"
+                        writeYaml file: "helm/helpline/values.yaml", data: valuesYaml
+                    }
+                }
+                stage('Package Helm and Push to ChartMuseum'){
+                    if(RELEASE_TYPE == 'master') {
+                        sh """
+                        echo "helm package ${HELM_CHART_LOCATION} -d ${HELM_TGZ_DEST_DIR}"
+                        """
+                        HELM_TGZ_PACKAGE_FINAL = HELM_CHARTNAME + '-' + HELM_CHART_VERSION + '.tgz'
+                        echo 'Helm .tgz Package: ' + HELM_TGZ_PACKAGE_FINAL
+
+                        sh """
+                        echo 'curl -u admin:admin -k --data-binary ${HELM_TGZ_PACKAGE_FINAL} http://chartmuseum-chartmuseum.chartmuseum:8080/api/charts'
+                        """
+                    }
+                }
+                stage ('Deploy with Helm') {
+                    //Could make this a "configuration step, and just set all remaining values before a global "deploy"
+                    if (RELEASE_TYPE == 'master'){
+                        echo 'Deploy with helm to ' + DEPLOY_OS_PROJECT + ' with tag:' + DEPLOY_IMAGE_TAG
+
+                        //Set Full path of TGZ
+                        def TGZ_PATH = HELM_TGZ_DEST_DIR + '/' + HELM_TGZ_PACKAGE_FINAL 
                         
-                        sh """
-                        echo 'helm init --client-only'
-                        echo 'helm version --tiller-namespace ${HELM_TILLER_NAMESPACE}'
-                        """
-                    }
-                    stage('Lint Tests') {
-                        echo 'Run Helm Lint Test'
 
                         sh """
-                        echo 'helm lint ${HELM_CHART_LOCATION}'
+                        echo 'helm version --tiller-namespace ${HELM_TILLER_NAMESPACE} \
+                        helm upgrade --install ${HELM_RELEASE_NAME_FINAL} \
+                        ${TGZ_PATH} \
+                        --namespace ${DEPLOY_OS_PROJECT} \
+                        --tiller-namespace ${HELM_TILLER_NAMESPACE} \
+                        -f ${HELM_YAML_LOCATION_FINAL} \
+                        --set image.apiRepository=${DEPLOY_OS_PROJECT}
+                        --set image.apiTag=${DEPLOY_IMAGE_TAG} \
+                        ''
                         """
-                    }
-                    stage('Helm Chart Versioning') {
-                        if (RELEASE_TYPE == 'develop' || \
-                            RELEASE_TYPE == 'stage' || \
-                            RELEASE_TYPE == 'release' || \
-                            RELEASE_TYPE == 'master' ) {
+                        sh 'helm --help'
+                    } else if (RELEASE_TYPE == 'develop' || RELEASE_TYPE == 'stage' || RELEASE_TYPE == 'release') {
+                        echo 'Deploy with helm to ' + DEPLOY_OS_PROJECT + ' with tag:' + DEPLOY_IMAGE_TAG
 
-                            //Version the AppVersion.  Just cosmetic, so that Helm will display what's currently deployed.
-                            def chartYaml = readYaml file: 'helm/helpline/Chart.yaml'
-                            def appVersion = chartYaml.appVersion.toString()
-                            HELM_CHART_VERSION = chartYaml.version.toString()
-
-                            echo 'Current Helm AppVersion in File: ' + appVersion
-                            echo 'Current Helm Chart Version in File: ' + HELM_CHART_VERSION    //Used for Master                            
-                            echo 'New Helm AppVersion for Deployment: ' + HELM_APP_VERSION_FINAL
-
-                            //Overwrite value.
-                            chartYaml.appVersion = HELM_APP_VERSION_FINAL
-
-                            sh "rm -f helm/helpline/Chart.yaml"
-                            writeYaml file: "helm/helpline/Chart.yaml", data: chartYaml
-                        }
-                    }
-                    stage('Helm Values Versioning') {
-                        if (RELEASE_TYPE == 'master') {
-                            def valuesYaml = readYaml file: 'helm/helpline/values.yaml'
-                            def currentImage = valuesYaml.images.apiTag.toString()
-                            echo 'Current Helm Image Tag in File: '+currentImage
-
-                            valuesYaml.images.apiTag = DEPLOY_IMAGE_TAG
-
-                            sh "rm -f helm/helpline/values.yaml"
-                            writeYaml file: "helm/helpline/values.yaml", data: valuesYaml
-                        }
-                    }
-                    stage('Package Helm and Push to ChartMuseum'){
-                        if(RELEASE_TYPE == 'master') {
-                            sh """
-                            echo "helm package ${HELM_CHART_LOCATION} -d ${HELM_TGZ_DEST_DIR}"
-                            """
-                            HELM_TGZ_PACKAGE_FINAL = HELM_CHARTNAME + '-' + HELM_CHART_VERSION + '.tgz'
-                            echo 'Helm .tgz Package: ' + HELM_TGZ_PACKAGE_FINAL
-
-                            sh """
-                            echo 'curl -u admin:admin -k --data-binary ${HELM_TGZ_PACKAGE_FINAL} http://chartmuseum-chartmuseum.chartmuseum:8080/api/charts'
-                            """
-                        }
-                    }
-                    stage ('Deploy with Helm') {
-                        //Could make this a "configuration step, and just set all remaining values before a global "deploy"
-                        if (RELEASE_TYPE == 'master'){
-                            echo 'Deploy with helm to ' + DEPLOY_OS_PROJECT + ' with tag:' + DEPLOY_IMAGE_TAG
-
-                            //Set Full path of TGZ
-                            def TGZ_PATH = HELM_TGZ_DEST_DIR + '/' + HELM_TGZ_PACKAGE_FINAL 
-                            
-
-                            /* Real Code Below
-                            sh """
-                            helm version --tiller-namespace ${HELM_TILLER_NAMESPACE} \
-                            helm upgrade --install ${HELM_RELEASE_NAME_FINAL} \
-                            ${TGZ_PATH} \
-                            --namespace ${DEPLOY_OS_PROJECT} \
-                            --tiller-namespace ${HELM_TILLER_NAMESPACE} \
-                            -f ${HELM_YAML_LOCATION_FINAL} \
-                            --set image.apiRepository=${DEPLOY_OS_PROJECT}
-                            --set image.apiTag=${DEPLOY_IMAGE_TAG}
-                            """
-                            */
-                            
-                            echo 'Deploy Production with helm to ' + DEPLOY_OS_PROJECT + ' with tag:' + DEPLOY_IMAGE_TAG
-                            sh 'helm --help'
-                        } else if (RELEASE_TYPE == 'develop' || RELEASE_TYPE == 'stage' || RELEASE_TYPE == 'release') {
-                            echo 'Deploy with helm to ' + DEPLOY_OS_PROJECT + ' with tag:' + DEPLOY_IMAGE_TAG
-
-                            sh """
-                            echo 'helm upgrade --install ${HELM_RELEASE_NAME_FINAL} \
-                            ${HELM_CHART_LOCATION} \
-                            --namespace ${DEPLOY_OS_PROJECT} \
-                            --tiller-namespace ${HELM_TILLER_NAMESPACE} \
-                            -f ${HELM_YAML_LOCATION_FINAL} \
-                            --set images.apiRepository=${DEPLOY_OS_PROJECT} \
-                            --set images.apiTag=${DEPLOY_IMAGE_TAG} \
-                            '
-                            """
-                        } else if (RELEASE_TYPE == 'hotfix') {
-                           //No deploy for Helm.  Could deploy into PRD off this (instead of merging to master.  Not sure I like)
-                           //Could deploy into Hot Fix environment, build one on the fly, or into Release.
-                            echo 'No deploy for HotFix.'
-                            
-                        }
+                        sh """
+                        echo 'helm upgrade --install ${HELM_RELEASE_NAME_FINAL} \
+                        ${HELM_CHART_LOCATION} \
+                        --namespace ${DEPLOY_OS_PROJECT} \
+                        --tiller-namespace ${HELM_TILLER_NAMESPACE} \
+                        -f ${HELM_YAML_LOCATION_FINAL} \
+                        --set images.apiRepository=${DEPLOY_OS_PROJECT} \
+                        --set images.apiTag=${DEPLOY_IMAGE_TAG} \
+                        '
+                        """
+                    } else if (RELEASE_TYPE == 'hotfix') {
+                       //No deploy for Helm.  Could deploy into PRD off this (instead of merging to master.  Not sure I like)
+                       //Could deploy into Hot Fix environment, build one on the fly, or into Release.
+                        echo 'No deploy for HotFix.'
+                        
                     }
                 }
             }
