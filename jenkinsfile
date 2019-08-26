@@ -317,189 +317,192 @@ podTemplate(
 
             }
         }
-        stage('Deploy Application') {
-            container('helm') {
-                stage('Initialize Helm') {
-                    echo 'Initialize Helm Client and Check tiller access'
-                    
-                    sh """
-                    echo 'helm init --client-only'
-                    echo 'helm version --tiller-namespace ${HELM_TILLER_NAMESPACE}'
-                    """
-                }
-                stage('Lint Tests') {
-                    echo 'Run Helm Lint Test'
-
-                    sh """
-                    echo 'helm lint ${HELM_CHART_LOCATION}'
-                    """
-                }
-                stage('Helm Versioning') {
-                    if (RELEASE_TYPE == 'develop' || RELEASE_TYPE == 'stage') {
-                        //Just version the appVersion for clarity, no "real" purpose.
-                        def chartYaml = readYaml file: 'helm/helpline/Chart.yaml'
-                        HELM_CHART_VERSION = chartYaml.version.toString()
-                        def appVersion = chartYaml.appVersion.toString()
-                        chartYaml.appVersion = RELEASE_TYPE  +'-'+GIT_SHORT_COMMIT
-                        echo 'Current: HELM_CHART_VERSION:'+HELM_CHART_VERSION+'appVersion:'+appVersion
-
-                        sh "rm -f helm/helpline/Chart.yaml"
-                        writeYaml file: "helm/helpline/Chart.yaml", data: chartYaml
-
-                    } else if (RELEASE_TYPE == 'master') {
-                        //App and Chart Version
-                        def chartYaml = readYaml file: 'helm/helpline/Chart.yaml'
-                        def valuesYaml = readYaml file: 'helm/helpline/values.yaml'
-
-                        HELM_CHART_VERSION = chartYaml.version.toString()
-                        def appVersion = chartYaml.appVersion.toString()
-                        def currentImage = valuesYaml.images.apiTag.toString()
-                        echo 'Current: HELM_CHART_VERSION:'+HELM_CHART_VERSION+' appVersion:'+appVersion+' currentImage:'+currentImage
-                        if (APP_VERSION == "") {
-                            error 'No Parsed APP_VERSION for deployment.'
-                        } else {
-                            chartYaml.appVersion = APP_VERSION
-                            valuesYaml.images.apiTag = APP_VERSION
-                        }
-
-                        sh "rm -f helm/helpline/values.yaml"
-                        sh "rm -f helm/helpline/Chart.yaml"
-
-                        writeYaml file: "helm/helpline/values.yaml", data: valuesYaml
-                        writeYaml file: "helm/helpline/Chart.yaml", data: chartYaml
-
-
-                    } else if (RELEASE_TYPE == 'release' || RELEASE_TYPE == 'hotfix'){
-
-                       //App and Chart Version
-                        def chartYaml = readYaml file: 'helm/helpline/Chart.yaml'
-                        def valuesYaml = readYaml file: 'helm/helpline/values.yaml'
-
-                        HELM_CHART_VERSION = chartYaml.version.toString()
-                        def appVersion = chartYaml.appVersion.toString()
-                        def currentImage = valuesYaml.images.apiTag.toString()
-                        echo 'Current: HELM_CHART_VERSION:'+HELM_CHART_VERSION+' appVersion:'+appVersion+' currentImage:'+currentImage
-                        if (APP_VERSION == "") {
-                            error 'No Parsed APP_VERSION for deployment.'
-                        } else {
-                            chartYaml.appVersion = APP_VERSION
-                            valuesYaml.images.apiTag = APP_VERSION
-                        }
-
-                        sh "rm -f helm/helpline/values.yaml"
-                        sh "rm -f helm/helpline/Chart.yaml"
-
-                        writeYaml file: "helm/helpline/values.yaml", data: valuesYaml
-                        writeYaml file: "helm/helpline/Chart.yaml", data: chartYaml
-                    } 
-                }
-                stage('Package Helm and Push to ChartMuseum'){
-                    if(RELEASE_TYPE == 'master') {
-                        sh """
-                        echo "helm package ${HELM_CHART_LOCATION} -d ${HELM_TGZ_DEST_DIR}"
-                        """
-                        HELM_TGZ_PACKAGE_FINAL = HELM_CHARTNAME + '-' + HELM_CHART_VERSION + '.tgz'
-                        echo 'Helm .tgz Package: ' + HELM_TGZ_PACKAGE_FINAL
-
-                        sh """
-                        echo 'curl -u admin:admin -k --data-binary ${HELM_TGZ_PACKAGE_FINAL} http://chartmuseum-chartmuseum.chartmuseum:8080/api/charts'
-                        """
-
-                    }
-                 }
-                stage ('Deploy with Helm') {
-                    //Could make this a "configuration step, and just set all remaining values before a global "deploy"
-                    if (RELEASE_TYPE == 'master'){
-                        //Set Full path of TGZ
-                        //def TGZ_PATH = HELM_TGZ_DEST_DIR + '/' + PACKAGE_NAME 
+        if (RELEASE_TYPE != 'hotfix') {
+            stage('Deploy Application') {
+                container('helm') {
+                    stage('Initialize Helm') {
+                        echo 'Initialize Helm Client and Check tiller access'
                         
-                        /* Real Code Below
                         sh """
-                        helm version --tiller-namespace ${HELM_TILLER_NAMESPACE} \
-                        helm upgrade --install ${HELM_RELEASE_NAME_FINAL} \
-                        ${TGZ_PATH} \
-                        --namespace ${DEPLOY_OS_PROJECT} \
-                        --tiller-namespace ${HELM_TILLER_NAMESPACE} \
-                        -f ${HELM_YAML_LOCATION_FINAL} \
-                        --set image.apiRepository=${DEPLOY_OS_PROJECT}
-                        --set image.apiTag=${DEPLOY_IMAGE_TAG}
-                        """
-                        */
-                        
-                        echo 'Deploy Production with helm to ' + DEPLOY_OS_PROJECT + ' with tag:' + DEPLOY_IMAGE_NAME
-                        sh 'helm --help'
-                    } else if (RELEASE_TYPE == 'hotfix') {
-                       //No deploy for Helm.  Could deploy into PRD off this (instead of merging to master.  Not sure I like)
-                       //Could deploy into Hot Fix environment, build one on the fly, or into Release.
-                        echo 'No deploy for HotFix.'
-                        
-                    } else if (RELEASE_TYPE == 'develop' || RELEASE_TYPE == 'stage' || RELEASE_TYPE == 'release'){
-                        echo 'Deploy with helm to ' + DEPLOY_OS_PROJECT + ' with tag:' + DEPLOY_IMAGE_TAG
-
-                        sh """
-                        echo 'helm upgrade --install ${HELM_RELEASE_NAME_FINAL} \
-                        ${HELM_CHART_LOCATION} \
-                        --namespace ${DEPLOY_OS_PROJECT} \
-                        --tiller-namespace ${HELM_TILLER_NAMESPACE} \
-                        -f ${HELM_YAML_LOCATION_FINAL} \
-                        --set images.apiRepository=${DEPLOY_OS_PROJECT} \
-                        --set images.apiTag=${DEPLOY_IMAGE_TAG} \
-                        '
+                        echo 'helm init --client-only'
+                        echo 'helm version --tiller-namespace ${HELM_TILLER_NAMESPACE}'
                         """
                     }
-                }
-                stage('Post-Deploy Verification') {
-                    container('jnlp') {
-                        if (RELEASE_TYPE == 'master') {
-                            echo 'Post Deploy Verfication for Master'
-                            sh """
-                            echo 'oc -n ${DEPLOY_OS_PROJECT} rollout status deployment api'
-                            """
-                        } else if (RELEASE_TYPE == 'develop'){
-                            echo 'Post Deploy Verfication for Develop'
-                        } else if (RELEASE_TYPE == 'stage'){
-                            echo 'Post Deploy Verfication for Stage'
+                    stage('Lint Tests') {
+                        echo 'Run Helm Lint Test'
+
+                        sh """
+                        echo 'helm lint ${HELM_CHART_LOCATION}'
+                        """
+                    }
+                    stage('Helm Versioning') {
+                        if (RELEASE_TYPE == 'develop' || RELEASE_TYPE == 'stage') {
+                            //Just version the appVersion for clarity, no "real" purpose.
+                            def chartYaml = readYaml file: 'helm/helpline/Chart.yaml'
+                            HELM_CHART_VERSION = chartYaml.version.toString()
+                            def appVersion = chartYaml.appVersion.toString()
+                            chartYaml.appVersion = RELEASE_TYPE  +'-'+GIT_SHORT_COMMIT
+                            echo 'Current: HELM_CHART_VERSION:'+HELM_CHART_VERSION+'appVersion:'+appVersion
+
+                            sh "rm -f helm/helpline/Chart.yaml"
+                            writeYaml file: "helm/helpline/Chart.yaml", data: chartYaml
+
+                        } else if (RELEASE_TYPE == 'master') {
+                            //App and Chart Version
+                            def chartYaml = readYaml file: 'helm/helpline/Chart.yaml'
+                            def valuesYaml = readYaml file: 'helm/helpline/values.yaml'
+
+                            HELM_CHART_VERSION = chartYaml.version.toString()
+                            def appVersion = chartYaml.appVersion.toString()
+                            def currentImage = valuesYaml.images.apiTag.toString()
+                            echo 'Current: HELM_CHART_VERSION:'+HELM_CHART_VERSION+' appVersion:'+appVersion+' currentImage:'+currentImage
+                            if (APP_VERSION == "") {
+                                error 'No Parsed APP_VERSION for deployment.'
+                            } else {
+                                chartYaml.appVersion = APP_VERSION
+                                valuesYaml.images.apiTag = APP_VERSION
+                            }
+
+                            sh "rm -f helm/helpline/values.yaml"
+                            sh "rm -f helm/helpline/Chart.yaml"
+
+                            writeYaml file: "helm/helpline/values.yaml", data: valuesYaml
+                            writeYaml file: "helm/helpline/Chart.yaml", data: chartYaml
+
+
                         } else if (RELEASE_TYPE == 'release'){
-                            echo 'Post Deploy Verfication for Release'
-                        } else if (RELEASE_TYPE == 'hotfix'){
-                            echo 'Post Deploy Verfication for HotFix'
+
+                           //App and Chart Version
+                            def chartYaml = readYaml file: 'helm/helpline/Chart.yaml'
+                            def valuesYaml = readYaml file: 'helm/helpline/values.yaml'
+
+                            HELM_CHART_VERSION = chartYaml.version.toString()
+                            def appVersion = chartYaml.appVersion.toString()
+                            def currentImage = valuesYaml.images.apiTag.toString()
+                            echo 'Current: HELM_CHART_VERSION:'+HELM_CHART_VERSION+' appVersion:'+appVersion+' currentImage:'+currentImage
+                            if (APP_VERSION == "") {
+                                error 'No Parsed APP_VERSION for deployment.'
+                            } else {
+                                chartYaml.appVersion = APP_VERSION
+                                valuesYaml.images.apiTag = APP_VERSION
+                            }
+
+                            sh "rm -f helm/helpline/values.yaml"
+                            sh "rm -f helm/helpline/Chart.yaml"
+
+                            writeYaml file: "helm/helpline/values.yaml", data: valuesYaml
+                            writeYaml file: "helm/helpline/Chart.yaml", data: chartYaml
                         } 
+                        
                     }
-                }    
-                stage('Post-Deploy Jobs') {
-                    //Could be run by Helm as Jobs, or by OpenShift using 'oc apply'
-                    container('jnlp') {
-                        if (RELEASE_TYPE == 'master') {
-                            echo 'Post Deploy Jobs for Master'
+                    stage('Package Helm and Push to ChartMuseum'){
+                        if(RELEASE_TYPE == 'master') {
                             sh """
-                            echo 'oc apply -f k8/post-upgrade-job.yml --namespace ${DEPLOY_OS_PROJECT}'
+                            echo "helm package ${HELM_CHART_LOCATION} -d ${HELM_TGZ_DEST_DIR}"
                             """
-                        } else if (RELEASE_TYPE == 'develop'){
-                            echo 'Post Deploy Jobs for Develop'
-                        } else if (RELEASE_TYPE == 'stage'){
-                            echo 'Post Deploy Jobs for Stage'
-                        } else if (RELEASE_TYPE.contains(REL_TAG_FILTER) && GIT_COMMIT_HEAD_TAG.contains(REL_TAG_FILTER)){
-                            echo 'Post Deploy Jobs for Release'
-                        } else if (RELEASE_TYPE.contains(HOT_TAG_FILTER) && GIT_COMMIT_HEAD_TAG.contains(HOT_TAG_FILTER)){
-                            echo 'Post Deploy Jobs for HotFix'
-                        } 
-                    }
-                }                
-                stage('JIRA') {
-                    container('jnlp') {
-                        if (RELEASE_TYPE == 'master') {
-                            echo 'JIRA Update of Issue/Ticket that its available in Production'
-                        } else if (RELEASE_TYPE == 'develop'){
-                            echo 'No Update'
-                        } else if (RELEASE_TYPE == 'stage'){
-                            echo 'No Update'
-                        } else if (RELEASE_TYPE.contains(REL_TAG_FILTER) && GIT_COMMIT_HEAD_TAG.contains(REL_TAG_FILTER)){
-                            echo 'JIRA Update of Issue/Ticket that its available for Testing'
-                        } else if (RELEASE_TYPE.contains(HOT_TAG_FILTER) && GIT_COMMIT_HEAD_TAG.contains(HOT_TAG_FILTER)){
-                            echo 'No Update'
-                        } 
+                            HELM_TGZ_PACKAGE_FINAL = HELM_CHARTNAME + '-' + HELM_CHART_VERSION + '.tgz'
+                            echo 'Helm .tgz Package: ' + HELM_TGZ_PACKAGE_FINAL
+
+                            sh """
+                            echo 'curl -u admin:admin -k --data-binary ${HELM_TGZ_PACKAGE_FINAL} http://chartmuseum-chartmuseum.chartmuseum:8080/api/charts'
+                            """
+
+                        }
+                     }
+                    stage ('Deploy with Helm') {
+                        //Could make this a "configuration step, and just set all remaining values before a global "deploy"
+                        if (RELEASE_TYPE == 'master'){
+                            //Set Full path of TGZ
+                            //def TGZ_PATH = HELM_TGZ_DEST_DIR + '/' + PACKAGE_NAME 
+                            
+                            /* Real Code Below
+                            sh """
+                            helm version --tiller-namespace ${HELM_TILLER_NAMESPACE} \
+                            helm upgrade --install ${HELM_RELEASE_NAME_FINAL} \
+                            ${TGZ_PATH} \
+                            --namespace ${DEPLOY_OS_PROJECT} \
+                            --tiller-namespace ${HELM_TILLER_NAMESPACE} \
+                            -f ${HELM_YAML_LOCATION_FINAL} \
+                            --set image.apiRepository=${DEPLOY_OS_PROJECT}
+                            --set image.apiTag=${DEPLOY_IMAGE_TAG}
+                            """
+                            */
+                            
+                            echo 'Deploy Production with helm to ' + DEPLOY_OS_PROJECT + ' with tag:' + DEPLOY_IMAGE_NAME
+                            sh 'helm --help'
+                        } else if (RELEASE_TYPE == 'hotfix') {
+                           //No deploy for Helm.  Could deploy into PRD off this (instead of merging to master.  Not sure I like)
+                           //Could deploy into Hot Fix environment, build one on the fly, or into Release.
+                            echo 'No deploy for HotFix.'
+                            
+                        } else if (RELEASE_TYPE == 'develop' || RELEASE_TYPE == 'stage' || RELEASE_TYPE == 'release'){
+                            echo 'Deploy with helm to ' + DEPLOY_OS_PROJECT + ' with tag:' + DEPLOY_IMAGE_TAG
+
+                            sh """
+                            echo 'helm upgrade --install ${HELM_RELEASE_NAME_FINAL} \
+                            ${HELM_CHART_LOCATION} \
+                            --namespace ${DEPLOY_OS_PROJECT} \
+                            --tiller-namespace ${HELM_TILLER_NAMESPACE} \
+                            -f ${HELM_YAML_LOCATION_FINAL} \
+                            --set images.apiRepository=${DEPLOY_OS_PROJECT} \
+                            --set images.apiTag=${DEPLOY_IMAGE_TAG} \
+                            '
+                            """
+                        }
                     }
                 }
+            }
+        }
+        stage('Post-Deploy Verification') {
+            container('jnlp') {
+                if (RELEASE_TYPE == 'master') {
+                    echo 'Post Deploy Verfication for Master'
+                    sh """
+                    echo 'oc -n ${DEPLOY_OS_PROJECT} rollout status deployment api'
+                    """
+                } else if (RELEASE_TYPE == 'develop'){
+                    echo 'Post Deploy Verfication for Develop'
+                } else if (RELEASE_TYPE == 'stage'){
+                    echo 'Post Deploy Verfication for Stage'
+                } else if (RELEASE_TYPE == 'release'){
+                    echo 'Post Deploy Verfication for Release'
+                } else if (RELEASE_TYPE == 'hotfix'){
+                    echo 'Post Deploy Verfication for HotFix'
+                } 
+            }
+        }    
+        stage('Post-Deploy Jobs') {
+            //Could be run by Helm as Jobs, or by OpenShift using 'oc apply'
+            container('jnlp') {
+                if (RELEASE_TYPE == 'master') {
+                    echo 'Post Deploy Jobs for Master'
+                    sh """
+                    echo 'oc apply -f k8/post-upgrade-job.yml --namespace ${DEPLOY_OS_PROJECT}'
+                    """
+                } else if (RELEASE_TYPE == 'develop'){
+                    echo 'Post Deploy Jobs for Develop'
+                } else if (RELEASE_TYPE == 'stage'){
+                    echo 'Post Deploy Jobs for Stage'
+                } else if (RELEASE_TYPE.contains(REL_TAG_FILTER) && GIT_COMMIT_HEAD_TAG.contains(REL_TAG_FILTER)){
+                    echo 'Post Deploy Jobs for Release'
+                } else if (RELEASE_TYPE.contains(HOT_TAG_FILTER) && GIT_COMMIT_HEAD_TAG.contains(HOT_TAG_FILTER)){
+                    echo 'Post Deploy Jobs for HotFix'
+                } 
+            }
+        }                
+        stage('JIRA') {
+            container('jnlp') {
+                if (RELEASE_TYPE == 'master') {
+                    echo 'JIRA Update of Issue/Ticket that its available in Production'
+                } else if (RELEASE_TYPE == 'develop'){
+                    echo 'No Update'
+                } else if (RELEASE_TYPE == 'stage'){
+                    echo 'No Update'
+                } else if (RELEASE_TYPE.contains(REL_TAG_FILTER) && GIT_COMMIT_HEAD_TAG.contains(REL_TAG_FILTER)){
+                    echo 'JIRA Update of Issue/Ticket that its available for Testing'
+                } else if (RELEASE_TYPE.contains(HOT_TAG_FILTER) && GIT_COMMIT_HEAD_TAG.contains(HOT_TAG_FILTER)){
+                    echo 'No Update'
+                } 
             }
         }
     }
