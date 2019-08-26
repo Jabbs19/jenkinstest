@@ -236,18 +236,20 @@ podTemplate(
         container('openshift') {
             stage('Create Build Secrets') {
                 //Set whatever secrets are needed for image build.
-                    // Will need to create uniqu credentials for all environments that have unique values.
-                    // e.g. dev-rails-master-key, stg-rails-master-key, prd-rails-master-key, rel-rails-master-key
+                    
+                // Will need to create uniqu credentials for all environments that have unique values.
+                // e.g. dev-rails-master-key, stg-rails-master-key, prd-rails-master-key, rel-rails-master-key
 
-                    /*withCredentials([
-                        string(credentialsId: 'psd-rails-master-key', variable: 'RAILS_MASTER_KEY'),
-                        string(credentialsId: 'psd-helpline-database-password-tst', variable: 'DATABASE_PWD'),
-                        string(credentialsId: 'psd-helpline-keybase', variable: 'KEYBASE')
-                        ]) {
-                            
-                            //Put all of the If else in here.
-                            }
-                    */
+                /*withCredentials([
+                    string(credentialsId: 'psd-rails-master-key', variable: 'RAILS_MASTER_KEY'),
+                    string(credentialsId: 'psd-helpline-database-password-tst', variable: 'DATABASE_PWD'),
+                    string(credentialsId: 'psd-helpline-keybase', variable: 'KEYBASE')
+                    ]) {
+                        
+                        //Put all of the If else in here.
+                        }
+                */
+
                 //Fake Data:
                 def RAILS_MASTER_KEY = 'rails-master-key-14njfgaht3q3tj'
                 def DATABASE_PWD = 'hereismydbapassword'
@@ -302,8 +304,21 @@ podTemplate(
 
             }
             stage ('Create Application Secrets') {
-                //All Environments need these created on the fly?
+                //Create whatever secrets are needed for application deployment and running.
+                    
+                // Will need to create uniqu credentials for all environments that have unique values.
+                // e.g. dev-rails-master-key, stg-rails-master-key, prd-rails-master-key, rel-rails-master-key
 
+                /*withCredentials([
+                    string(credentialsId: 'psd-rails-master-key', variable: 'RAILS_MASTER_KEY'),
+                    string(credentialsId: 'psd-helpline-database-password-tst', variable: 'DATABASE_PWD'),
+                    string(credentialsId: 'psd-helpline-keybase', variable: 'KEYBASE')
+                    ]) {
+                        
+                        //Put all of the If else in here.
+                        }
+                */
+                
                 //Fake Data:
                 def RAILS_MASTER_KEY = 'rails-master-key-14njfgaht3q3tj'
                 def DATABASE_PWD = 'hereismydbapassword'
