@@ -40,18 +40,15 @@ def HELM_TGZ_DEST_DIR = 'helm'
 //Global "to-be-assigned" Variables
 def IMAGE_BUILD_OS_PROJECT = ""     //OpenShift Project (aka Repo) (e.g. psd-helpline-tst)
 def IMAGE_BUILD_TAG = ""            //Tag Name for Image (e.g. :test
-def IMAGE_BUILD_FULL_NAME = ""      //Full Image Name Image (e.g. psd-hepline-tst/helpline:test) 
-def IMAGE_BUILD_SECONDARY_TAG = ""  //Additional tags to be applied after Build
 def DEPLOY_IMAGE_TAG = ""
-def DEPLOY_IMAGE_NAME = ""
 def DEPLOY_OS_PROJECT = ""          //Project that the image will be pulled from for deployment.
 def RELEASE_TYPE = ""               //Branch name, with tags mapped to an easy-to-read name (e.g. release, hotfix)
 def GIT_COMMIT_HEAD_TAG = ""
 def GIT_SHORT_COMMIT = ""
+def GIT_PARSED_APP_VERSION = ""
 def HELM_RELEASE_NAME_FINAL = ""
 def HELM_YAML_LOCATION_FINAL = ""
 def HELM_TGZ_PACKAGE_FINAL = ""
-def APP_VERSION = ""
 def HELM_CHART_VERSION = ""
 
       //Project that image will be built/tagged to.
@@ -88,13 +85,13 @@ podTemplate(
                 //Build "App Version"
                 if (GIT_COMMIT_HEAD_TAG != "") {
                     if (GIT_COMMIT_HEAD_TAG.substring(0,REL_TAG_FILTER.length()) == REL_TAG_FILTER) {
-                        APP_VERSION = GIT_COMMIT_HEAD_TAG.substring(REL_TAG_FILTER.length(),GIT_COMMIT_HEAD_TAG.length())
+                        GIT_PARSED_APP_VERSION = GIT_COMMIT_HEAD_TAG.substring(REL_TAG_FILTER.length(),GIT_COMMIT_HEAD_TAG.length())
                     } else if (GIT_COMMIT_HEAD_TAG.substring(0,HOT_TAG_FILTER.length()) == HOT_TAG_FILTER) {
-                        APP_VERSION = GIT_COMMIT_HEAD_TAG.substring(HOT_TAG_FILTER.length(),GIT_COMMIT_HEAD_TAG.length())
+                        GIT_PARSED_APP_VERSION = GIT_COMMIT_HEAD_TAG.substring(HOT_TAG_FILTER.length(),GIT_COMMIT_HEAD_TAG.length())
                     } else {
-                        APP_VERSION = ""
+                        GIT_PARSED_APP_VERSION = ""
                     }
-                    echo 'App Version Parsing Complete (if needed): ' + APP_VERSION
+                    echo 'App Version Parsing Complete (if needed): ' + GIT_PARSED_APP_VERSION
                 }
                 GIT_SHORT_COMMIT = sh(returnStdout: true, script: "git rev-parse --short HEAD | tail -1").trim()
 
@@ -105,8 +102,7 @@ podTemplate(
                     echo 'Executing on Master'
                     RELEASE_TYPE = 'master'
                     DEPLOY_OS_PROJECT = PRD_OS_PROJECT
-                    DEPLOY_IMAGE_TAG = APP_VERSION
-                    DEPLOY_IMAGE_NAME = DEPLOY_OS_PROJECT + '/' + IMAGE_NAME + ':' + DEPLOY_IMAGE_TAG
+                    DEPLOY_IMAGE_TAG = GIT_PARSED_APP_VERSION
                     HELM_RELEASE_NAME_FINAL = HELM_CHARTNAME + '-prd'
                     HELM_YAML_LOCATION_FINAL = PRD_HELM_VALUES_LOC
                     //Tags for Master Release Checks.  Could add more filters, sig checks, etc.
@@ -139,7 +135,7 @@ podTemplate(
                     IMAGE_BUILD_OS_PROJECT = REL_OS_PROJECT
                     IMAGE_BUILD_TAG = REL_IMAGE_TAG
                     DEPLOY_OS_PROJECT = REL_OS_PROJECT
-                    DEPLOY_IMAGE_TAG = APP_VERSION
+                    DEPLOY_IMAGE_TAG = GIT_PARSED_APP_VERSION
                     HELM_YAML_LOCATION_FINAL = REL_HELM_VALUES_LOC
                     HELM_RELEASE_NAME_FINAL = HELM_CHARTNAME + '-rel'
 
@@ -153,7 +149,7 @@ podTemplate(
                     IMAGE_BUILD_OS_PROJECT = REL_OS_PROJECT
                     IMAGE_BUILD_TAG = HOT_IMAGE_TAG
                     DEPLOY_OS_PROJECT = REL_OS_PROJECT                  //Doesn't actually deploy.
-                    DEPLOY_IMAGE_TAG = APP_VERSION
+                    DEPLOY_IMAGE_TAG = GIT_PARSED_APP_VERSION
                     HELM_YAML_LOCATION_FINAL = PRD_HELM_VALUES_LOC
                     HELM_RELEASE_NAME_FINAL = HELM_CHARTNAME + '-hot'  //Doesn't actually deploy or use helm.
                     if (GIT_COMMIT_HEAD_TAG == "") {
@@ -178,7 +174,7 @@ podTemplate(
                 echo 'Build Image Name: ' + IMAGE_BUILD_OS_PROJECT + '/' + IMAGE_NAME + ':' + IMAGE_BUILD_TAG
                 echo 'Deploy Project: ' + DEPLOY_OS_PROJECT
                 echo 'Deploy Image Name: ' +  DEPLOY_OS_PROJECT + '/' + IMAGE_NAME + ':' + DEPLOY_IMAGE_TAG
-                echo 'Parsed App Version (If Applicable): ' + APP_VERSION
+                echo 'Parsed App Version (If Applicable): ' + GIT_PARSED_APP_VERSION
             }
         }
         stage('Unit Test') {
@@ -266,7 +262,7 @@ podTemplate(
                     
                     echo '1. Delete All Secrets in TST. 2. Create Image build secretsin TST. 3. Create Application Secrets in TST.'
                     sh """
-                    echo 'oc project ${BUILD_OS_PROJECT}'
+                    echo 'oc project ${IMAGE_BUILD_OS_PROJECT}'
                     echo 'oc delete secret "bt-helpline-secret-rails" -n ${IMAGE_BUILD_OS_PROJECT}'
                     echo 'oc create secret generic bt-helpline-secret-rails --from-literal=RAILS_MASTER_KEY="${RAILS_MASTER_KEY}"'
                     """
@@ -299,12 +295,12 @@ podTemplate(
                 if (RELEASE_TYPE == 'release' || RELEASE_TYPE == 'hotfix') {
                     // This is already set in the beginning configuration section, but could be done here.
                     def SOURCE_TAG = REL_OS_PROJECT + '/' + IMAGE_NAME + ':' + REL_IMAGE_TAG
-                    def DEST_TAG = REL_OS_PROJECT + '/' + IMAGE_NAME + ':' + APP_VERSION
+                    def DEST_TAG = REL_OS_PROJECT + '/' + IMAGE_NAME + ':' + GIT_PARSED_APP_VERSION
                     sh "echo 'oc tag ${SOURCE_TAG} ${DEST_TAG}'"
                 } else if (RELEASE_TYPE == 'master') {
                     // This is already set in the beginning configuration section, but could be done here.
-                    def SOURCE_TAG = REL_OS_PROJECT + '/' + IMAGE_NAME + ':' + APP_VERSION
-                    def DEST_TAG = PRD_OS_PROJECT + '/' + IMAGE_NAME + ':' + APP_VERSION
+                    def SOURCE_TAG = REL_OS_PROJECT + '/' + IMAGE_NAME + ':' + GIT_PARSED_APP_VERSION
+                    def DEST_TAG = PRD_OS_PROJECT + '/' + IMAGE_NAME + ':' + GIT_PARSED_APP_VERSION
                     sh "echo 'oc tag ${SOURCE_TAG} ${DEST_TAG}'"
                 }
             }
@@ -352,11 +348,11 @@ podTemplate(
                             def appVersion = chartYaml.appVersion.toString()
                             def currentImage = valuesYaml.images.apiTag.toString()
                             echo 'Current: HELM_CHART_VERSION:'+HELM_CHART_VERSION+' appVersion:'+appVersion+' currentImage:'+currentImage
-                            if (APP_VERSION == "") {
-                                error 'No Parsed APP_VERSION for deployment.'
+                            if (GIT_PARSED_APP_VERSION == "") {
+                                error 'No Parsed GIT_PARSED_APP_VERSION for deployment.'
                             } else {
-                                chartYaml.appVersion = APP_VERSION
-                                valuesYaml.images.apiTag = APP_VERSION
+                                chartYaml.appVersion = GIT_PARSED_APP_VERSION
+                                valuesYaml.images.apiTag = GIT_PARSED_APP_VERSION
                             }
 
                             sh "rm -f helm/helpline/values.yaml"
@@ -376,11 +372,11 @@ podTemplate(
                             def appVersion = chartYaml.appVersion.toString()
                             def currentImage = valuesYaml.images.apiTag.toString()
                             echo 'Current: HELM_CHART_VERSION:'+HELM_CHART_VERSION+' appVersion:'+appVersion+' currentImage:'+currentImage
-                            if (APP_VERSION == "") {
-                                error 'No Parsed APP_VERSION for deployment.'
+                            if (GIT_PARSED_APP_VERSION == "") {
+                                error 'No Parsed GIT_PARSED_APP_VERSION for deployment.'
                             } else {
-                                chartYaml.appVersion = APP_VERSION
-                                valuesYaml.images.apiTag = APP_VERSION
+                                chartYaml.appVersion = GIT_PARSED_APP_VERSION
+                                valuesYaml.images.apiTag = GIT_PARSED_APP_VERSION
                             }
 
                             sh "rm -f helm/helpline/values.yaml"
@@ -424,7 +420,7 @@ podTemplate(
                             """
                             */
                             
-                            echo 'Deploy Production with helm to ' + DEPLOY_OS_PROJECT + ' with tag:' + DEPLOY_IMAGE_NAME
+                            echo 'Deploy Production with helm to ' + DEPLOY_OS_PROJECT + ' with tag:' + DEPLOY_IMAGE_TAG
                             sh 'helm --help'
                         } else if (RELEASE_TYPE == 'hotfix') {
                            //No deploy for Helm.  Could deploy into PRD off this (instead of merging to master.  Not sure I like)
