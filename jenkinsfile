@@ -188,7 +188,19 @@ podTemplate(
                 if (RELEASE_TYPE == 'master') {
                     echo 'No Unit Test'
                 } else if (RELEASE_TYPE == 'develop'){
-                    echo 'No Unit Test'
+                    echo 'Execute Unit Test'
+                    //Should this be parameterized for RAILS_ENV
+
+                    //Fake Data:
+                    def RAILS_MASTER_KEY = '4174071407141'
+
+                    sh """
+                    echo 'bundle install'
+                    echo 'rake db:create RAILS_ENV=test'
+                    echo 'rake db:migrate RAILS_ENV=test'
+                    echo 'RAILS_MASTER_KEY=${RAILS_MASTER_KEY} rake db:test:prepare'
+                    echo 'RAILS_MASTER_KEY=${RAILS_MASTER_KEY} rspec'
+                    """
                 } else if (RELEASE_TYPE == 'stage'){
                     echo 'No Unit Test'
                 } else if (RELEASE_TYPE == 'release'){
