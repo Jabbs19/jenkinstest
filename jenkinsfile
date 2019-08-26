@@ -50,6 +50,7 @@ def HELM_RELEASE_NAME_FINAL = ""
 def HELM_YAML_LOCATION_FINAL = ""
 def HELM_TGZ_PACKAGE_FINAL = ""
 def HELM_CHART_VERSION = ""
+def HELM_APP_VERSION_FINAL = ""
 
       //Project that image will be built/tagged to.
 
@@ -80,8 +81,7 @@ podTemplate(
             stage('SCM Checkout') {
                 checkout scm
                 GIT_COMMIT_HEAD_TAG = sh(returnStdout: true, script: "git tag -l --points-at HEAD | tail -1").trim()
-                echo 'Commit Head Tag:' + GIT_COMMIT_HEAD_TAG
-                echo 'Current Branch Name:' + env.BRANCH_NAME
+                GIT_SHORT_COMMIT = sh(returnStdout: true, script: "git rev-parse --short HEAD | tail -1").trim()
                 //Build "App Version"
                 if (GIT_COMMIT_HEAD_TAG != "") {
                     if (GIT_COMMIT_HEAD_TAG.substring(0,REL_TAG_FILTER.length()) == REL_TAG_FILTER) {
@@ -93,7 +93,6 @@ podTemplate(
                     }
                     echo 'App Version Parsing Complete (if needed): ' + GIT_PARSED_APP_VERSION
                 }
-                GIT_SHORT_COMMIT = sh(returnStdout: true, script: "git rev-parse --short HEAD | tail -1").trim()
 
             }
             stage('Set Branch Variables') {
@@ -107,8 +106,10 @@ podTemplate(
                     HELM_YAML_LOCATION_FINAL = PRD_HELM_VALUES_LOC
                     //Tags for Master Release Checks.  Could add more filters, sig checks, etc.
                     if (GIT_COMMIT_HEAD_TAG == "") {
-                        error "No Git Version at Master Head"
-                    } 
+                        error "No Git Version at Commit Head"
+                    } else {
+                    HELM_APP_VERSION_FINAL = GIT_PARSED_APP_VERSION
+                    }
                 } else if (env.BRANCH_NAME == 'develop'){
                     echo 'Execute on Develop'
                     RELEASE_TYPE = 'develop'
@@ -118,6 +119,7 @@ podTemplate(
                     DEPLOY_IMAGE_TAG = DEV_IMAGE_TAG
                     HELM_YAML_LOCATION_FINAL = DEV_HELM_VALUES_LOC
                     HELM_RELEASE_NAME_FINAL = HELM_CHARTNAME + '-dev'
+                    HELM_APP_VERSION_FINAL = RELEASE_TYPE + '-' + GIT_SHORT_COMMIT
 
                 } else if (env.BRANCH_NAME == 'stage'){
                     echo 'Execute on Stage'
@@ -128,6 +130,7 @@ podTemplate(
                     DEPLOY_IMAGE_TAG = STG_IMAGE_TAG
                     HELM_YAML_LOCATION_FINAL = STG_HELM_VALUES_LOC
                     HELM_RELEASE_NAME_FINAL = HELM_CHARTNAME + '-stg'
+                    HELM_APP_VERSION_FINAL = RELEASE_TYPE + '-' + GIT_SHORT_COMMIT
 
                 } else if (env.BRANCH_NAME.contains(REL_TAG_FILTER) && GIT_COMMIT_HEAD_TAG.contains(REL_TAG_FILTER)){
                     echo 'Execute on specific "Release" Tag of:' + REL_TAG_FILTER
@@ -141,7 +144,9 @@ podTemplate(
 
                     if (GIT_COMMIT_HEAD_TAG == "") {
                         error "No Git Version at Commit Head"
-                    } 
+                    } else {
+                    HELM_APP_VERSION_FINAL = GIT_PARSED_APP_VERSION
+                    }
 
                 } else if (env.BRANCH_NAME.contains(HOT_TAG_FILTER) && GIT_COMMIT_HEAD_TAG.contains(HOT_TAG_FILTER)){
                     echo 'Execute on specific "HotFix" Tag of:' + HOT_TAG_FILTER
@@ -154,7 +159,9 @@ podTemplate(
                     HELM_RELEASE_NAME_FINAL = HELM_CHARTNAME + '-hot'  //Doesn't actually deploy or use helm.
                     if (GIT_COMMIT_HEAD_TAG == "") {
                         error "No Git Version at Commit Head"
-                    } 
+                    } else {
+                    HELM_APP_VERSION_FINAL = GIT_PARSED_APP_VERSION
+                    }
 
                 }
                 else {
@@ -247,9 +254,9 @@ podTemplate(
                 def KEYBASE = '75q05704319750914375093475070134901'
 
                 if (RELEASE_TYPE == 'master') {
-                    //No Build secret, just Application/Deployment Secret
-                    echo '1. Delete All Secrets in PRD. 2. Create Application Secrets in PRD.'
+                    //Application Secrets
                     sh """
+                    echo 'Deleting and Creating Application Secrets in ${DEPLOY_OS_PROJECT}'
                     echo 'oc project ${DEPLOY_OS_PROJECT}'
                     echo 'oc delete secret "bt-helpline-secret" -n ${DEPLOY_OS_PROJECT}'
                     echo 'oc create secret generic bt-helpline-secret --from-literal=database-password="${DATABASE_PWD}" --from-literal=keybase="${KEYBASE}"'
@@ -258,20 +265,20 @@ podTemplate(
                     RELEASE_TYPE == 'stage' || \
                     RELEASE_TYPE == 'release' || \
                     RELEASE_TYPE == 'hotfix') {
-                    //Both Build and Application/Deployment Secret
-                    
-                    echo '1. Delete All Secrets in TST. 2. Create Image build secretsin TST. 3. Create Application Secrets in TST.'
+                    //Build Secrets
                     sh """
+                    echo 'Deleting and Creating Build Secrets in ${IMAGE_BUILD_OS_PROJECT}'
                     echo 'oc project ${IMAGE_BUILD_OS_PROJECT}'
                     echo 'oc delete secret "bt-helpline-secret-rails" -n ${IMAGE_BUILD_OS_PROJECT}'
                     echo 'oc create secret generic bt-helpline-secret-rails --from-literal=RAILS_MASTER_KEY="${RAILS_MASTER_KEY}"'
                     """
 
+                    //Application Secrets
                     sh """
+                    echo 'Deleting and Creating Application Secrets in ${DEPLOY_OS_PROJECT}'
                     echo 'oc project ${DEPLOY_OS_PROJECT}'
                     echo 'oc delete secret "bt-helpline-secret" -n ${DEPLOY_OS_PROJECT}'
                     echo 'oc create secret generic bt-helpline-secret --from-literal=database-password="${DATABASE_PWD}" --from-literal=keybase="${KEYBASE}"'                    
-
                     """               
                 }
             }
@@ -281,9 +288,9 @@ podTemplate(
                     RELEASE_TYPE == 'stage' || \
                     RELEASE_TYPE == 'release' ||\
                     RELEASE_TYPE == 'hotfix') {
-                    echo 'Build on ' + RELEASE_TYPE
+                    echo 'Build on Release Type:' + RELEASE_TYPE
+                    echo 'The Image Tag is set in the Build Config for this project: ' + IMAGE_BUILD_OS_PROJECT
                     echo 'Expected Build Image Name:' + IMAGE_BUILD_OS_PROJECT + '/' + IMAGE_NAME + ':' + IMAGE_BUILD_TAG
-                    echo 'The Image Tag is set in the Build Config for this project: ${IMAGE_BUILD_OS_PROJECT}'
 
                     sh"""
                     echo 'oc start-build "helpline-build" --from-repo="." --wait=true --follow -n ${IMAGE_BUILD_OS_PROJECT}'
@@ -326,65 +333,46 @@ podTemplate(
                         echo 'helm lint ${HELM_CHART_LOCATION}'
                         """
                     }
-                    stage('Helm Versioning') {
+                    stage('Helm App Versioning') {
                         if (RELEASE_TYPE == 'develop' || RELEASE_TYPE == 'stage') {
-                            //Just version the appVersion for clarity, no "real" purpose.
+
+                    }
+                    stage('Helm Chart Versioning') {
+                        if (RELEASE_TYPE == 'develop' || \
+                            RELEASE_TYPE == 'stage' || \
+                            RELEASE_TYPE == 'release' || \
+                            RELEASE_TYPE == 'master' \
+                            ) {
+                            //Version the AppVersion.  Just cosmetic, so that Helm will display what's currently deployed.
                             def chartYaml = readYaml file: 'helm/helpline/Chart.yaml'
-                            HELM_CHART_VERSION = chartYaml.version.toString()
                             def appVersion = chartYaml.appVersion.toString()
-                            chartYaml.appVersion = RELEASE_TYPE  +'-'+GIT_SHORT_COMMIT
-                            echo 'Current: HELM_CHART_VERSION:'+HELM_CHART_VERSION+'appVersion:'+appVersion
+                            HELM_CHART_VERSION = chartYaml.version.toString()
+
+                            echo 'Current Helm AppVersion in File: ' + appVersion
+                            echo 'Current Helm Chart Version in File: ' + HELM_CHART_VERSION    //Used for Master                            
+
+                            //Overwrite value.
+                            echo 'New Helm AppVersion for Deployment: ' + HELM_APP_VERSION_FINAL
+                            chartYaml.appVersion = HELM_APP_VERSION_FINAL
 
                             sh "rm -f helm/helpline/Chart.yaml"
                             writeYaml file: "helm/helpline/Chart.yaml", data: chartYaml
 
-                        } else if (RELEASE_TYPE == 'master') {
-                            //App and Chart Version
-                            def chartYaml = readYaml file: 'helm/helpline/Chart.yaml'
+                        }
+                    }
+                    stage('Helm Values Versioning') {
+                        if (RELEASE_TYPE == 'master') {
                             def valuesYaml = readYaml file: 'helm/helpline/values.yaml'
-
-                            HELM_CHART_VERSION = chartYaml.version.toString()
-                            def appVersion = chartYaml.appVersion.toString()
                             def currentImage = valuesYaml.images.apiTag.toString()
-                            echo 'Current: HELM_CHART_VERSION:'+HELM_CHART_VERSION+' appVersion:'+appVersion+' currentImage:'+currentImage
-                            if (GIT_PARSED_APP_VERSION == "") {
-                                error 'No Parsed GIT_PARSED_APP_VERSION for deployment.'
-                            } else {
-                                chartYaml.appVersion = GIT_PARSED_APP_VERSION
-                                valuesYaml.images.apiTag = GIT_PARSED_APP_VERSION
-                            }
+                            echo 'Current Helm Image Tag in File: '+currentImage
+
+                            valuesYaml.images.apiTag = DEPLOY_IMAGE_TAG
 
                             sh "rm -f helm/helpline/values.yaml"
-                            sh "rm -f helm/helpline/Chart.yaml"
-
                             writeYaml file: "helm/helpline/values.yaml", data: valuesYaml
-                            writeYaml file: "helm/helpline/Chart.yaml", data: chartYaml
 
+                        }
 
-                        } else if (RELEASE_TYPE == 'release'){
-
-                           //App and Chart Version
-                            def chartYaml = readYaml file: 'helm/helpline/Chart.yaml'
-                            def valuesYaml = readYaml file: 'helm/helpline/values.yaml'
-
-                            HELM_CHART_VERSION = chartYaml.version.toString()
-                            def appVersion = chartYaml.appVersion.toString()
-                            def currentImage = valuesYaml.images.apiTag.toString()
-                            echo 'Current: HELM_CHART_VERSION:'+HELM_CHART_VERSION+' appVersion:'+appVersion+' currentImage:'+currentImage
-                            if (GIT_PARSED_APP_VERSION == "") {
-                                error 'No Parsed GIT_PARSED_APP_VERSION for deployment.'
-                            } else {
-                                chartYaml.appVersion = GIT_PARSED_APP_VERSION
-                                valuesYaml.images.apiTag = GIT_PARSED_APP_VERSION
-                            }
-
-                            sh "rm -f helm/helpline/values.yaml"
-                            sh "rm -f helm/helpline/Chart.yaml"
-
-                            writeYaml file: "helm/helpline/values.yaml", data: valuesYaml
-                            writeYaml file: "helm/helpline/Chart.yaml", data: chartYaml
-                        } 
-                        
                     }
                     stage('Package Helm and Push to ChartMuseum'){
                         if(RELEASE_TYPE == 'master') {
@@ -403,9 +391,12 @@ podTemplate(
                     stage ('Deploy with Helm') {
                         //Could make this a "configuration step, and just set all remaining values before a global "deploy"
                         if (RELEASE_TYPE == 'master'){
+                            echo 'Deploy with helm to ' + DEPLOY_OS_PROJECT + ' with tag:' + DEPLOY_IMAGE_TAG
+
                             //Set Full path of TGZ
-                            //def TGZ_PATH = HELM_TGZ_DEST_DIR + '/' + PACKAGE_NAME 
+                            def TGZ_PATH = HELM_TGZ_DEST_DIR + '/' + HELM_TGZ_PACKAGE_FINAL 
                             
+
                             /* Real Code Below
                             sh """
                             helm version --tiller-namespace ${HELM_TILLER_NAMESPACE} \
@@ -421,11 +412,6 @@ podTemplate(
                             
                             echo 'Deploy Production with helm to ' + DEPLOY_OS_PROJECT + ' with tag:' + DEPLOY_IMAGE_TAG
                             sh 'helm --help'
-                        } else if (RELEASE_TYPE == 'hotfix') {
-                           //No deploy for Helm.  Could deploy into PRD off this (instead of merging to master.  Not sure I like)
-                           //Could deploy into Hot Fix environment, build one on the fly, or into Release.
-                            echo 'No deploy for HotFix.'
-                            
                         } else if (RELEASE_TYPE == 'develop' || RELEASE_TYPE == 'stage' || RELEASE_TYPE == 'release'){
                             echo 'Deploy with helm to ' + DEPLOY_OS_PROJECT + ' with tag:' + DEPLOY_IMAGE_TAG
 
@@ -439,6 +425,11 @@ podTemplate(
                             --set images.apiTag=${DEPLOY_IMAGE_TAG} \
                             '
                             """
+                        } else if (RELEASE_TYPE == 'hotfix') {
+                           //No deploy for Helm.  Could deploy into PRD off this (instead of merging to master.  Not sure I like)
+                           //Could deploy into Hot Fix environment, build one on the fly, or into Release.
+                            echo 'No deploy for HotFix.'
+                            
                         }
                     }
                 }
