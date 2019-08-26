@@ -45,7 +45,7 @@ def IMAGE_BUILD_SECONDARY_TAG = ""  //Additional tags to be applied after Build
 def DEPLOY_IMAGE_TAG = ""
 def DEPLOY_IMAGE_NAME = ""
 def DEPLOY_OS_PROJECT = ""          //Project that the image will be pulled from for deployment.
-
+def RELEASE_TYPE = ""               //Branch name, with tags mapped to an easy-to-read name (e.g. release, hotfix)
 def GIT_COMMIT_HEAD_TAG = ""
 def GIT_SHORT_COMMIT = ""
 def HELM_RELEASE_NAME_FINAL = ""
@@ -102,6 +102,7 @@ podTemplate(
                 echo 'Set Branch Variables Branch:'
                 if (env.BRANCH_NAME == 'master') {
                     echo 'Executing on Master'
+                    RELEASE_TYPE = env.BRANCH_NAME
                     IMAGE_BUILD_OS_PROJECT = ""
                     IMAGE_BUILD_TAG = ""
                     DEPLOY_OS_PROJECT = PRD_OS_PROJECT
@@ -116,6 +117,7 @@ podTemplate(
                     } 
                 } else if (env.BRANCH_NAME == 'develop'){
                     echo 'Execute on Develop'
+                    RELEASE_TYPE = env.BRANCH_NAME
                     IMAGE_BUILD_OS_PROJECT = DEV_OS_PROJECT
                     IMAGE_BUILD_TAG = DEV_IMAGE_TAG
                     DEPLOY_OS_PROJECT = DEV_OS_PROJECT
@@ -126,6 +128,7 @@ podTemplate(
 
                 } else if (env.BRANCH_NAME == 'stage'){
                     echo 'Execute on Stage'
+                    RELEASE_TYPE = env.BRANCH_NAME
                     IMAGE_BUILD_OS_PROJECT = STG_OS_PROJECT
                     IMAGE_BUILD_TAG = STG_IMAGE_TAG
                     DEPLOY_OS_PROJECT = STG_OS_PROJECT
@@ -136,6 +139,7 @@ podTemplate(
 
                 } else if (env.BRANCH_NAME.contains(REL_TAG_FILTER) && GIT_COMMIT_HEAD_TAG.contains(REL_TAG_FILTER)){
                     echo 'Execute on specific "Release" Tag of:' + REL_TAG_FILTER
+                    RELEASE_TYPE = 'release'
                     IMAGE_BUILD_OS_PROJECT = REL_OS_PROJECT
                     IMAGE_BUILD_TAG = REL_IMAGE_TAG
                     DEPLOY_OS_PROJECT = REL_OS_PROJECT
@@ -150,6 +154,7 @@ podTemplate(
 
                 } else if (env.BRANCH_NAME.contains(HOT_TAG_FILTER) && GIT_COMMIT_HEAD_TAG.contains(HOT_TAG_FILTER)){
                     echo 'Execute on specific "HotFix" Tag of:' + HOT_TAG_FILTER
+                    RELEASE_TYPE = 'hotfix'
                     IMAGE_BUILD_OS_PROJECT = REL_OS_PROJECT
                     IMAGE_BUILD_TAG = HOT_IMAGE_TAG
                     DEPLOY_OS_PROJECT = REL_OS_PROJECT //Doesn't actually deploy.
@@ -182,13 +187,13 @@ podTemplate(
         }
         stage('Unit Test') {
             container('ruby') {
-                if (env.BRANCH_NAME == 'master') {
+                if (RELEASE_TYPE == 'master') {
                     echo 'No Unit Test'
-                } else if (env.BRANCH_NAME == 'develop'){
+                } else if (RELEASE_TYPE == 'develop'){
                     echo 'No Unit Test'
-                } else if (env.BRANCH_NAME == 'stage'){
+                } else if (RELEASE_TYPE == 'stage'){
                     echo 'No Unit Test'
-                } else if (env.BRANCH_NAME.contains(REL_TAG_FILTER) && GIT_COMMIT_HEAD_TAG.contains(REL_TAG_FILTER)){
+                } else if (RELEASE_TYPE == 'release'){
                     echo 'Execute Unit Tests'
                     sh """
                     ruby -v
@@ -208,22 +213,22 @@ podTemplate(
                         }
                     }
                     */
-                } else if (env.BRANCH_NAME.contains(HOT_TAG_FILTER) && GIT_COMMIT_HEAD_TAG.contains(HOT_TAG_FILTER)){
+                } else if (RELEASE_TYPE == 'hotfix'){
                     echo 'No Unit Test'
                 } 
             }
         }
         stage('Checkmarx') {
             container('jnlp') {
-                if (env.BRANCH_NAME == 'master') {
+                if (RELEASE_TYPE == 'master') {
                     echo 'No Checkmarx'
-                } else if (env.BRANCH_NAME == 'develop'){
+                } else if (RELEASE_TYPE == 'develop'){
                     echo 'No Checkmarx'
-                } else if (env.BRANCH_NAME == 'stage'){
+                } else if (RELEASE_TYPE == 'stage'){
                     echo 'No Checkmarx'
-                } else if (env.BRANCH_NAME.contains(REL_TAG_FILTER) && GIT_COMMIT_HEAD_TAG.contains(REL_TAG_FILTER)){
+                } else if (RELEASE_TYPE == 'release'){
                     echo 'Execute Checkmarx'
-                } else if (env.BRANCH_NAME.contains(HOT_TAG_FILTER) && GIT_COMMIT_HEAD_TAG.contains(HOT_TAG_FILTER)){
+                } else if (RELEASE_TYPE == 'hotfix'){
                     echo 'No Checkmarx'
                 } 
             }
@@ -249,7 +254,7 @@ podTemplate(
                 def DATABASE_PWD = 'hereismydbapassword'
                 def KEYBASE = '75q05704319750914375093475070134901'
 
-                if (env.BRANCH_NAME == 'master') {
+                if (RELEASE_TYPE == 'master') {
                     //No Build secret, just Application/Deployment Secret
                     echo '1. Delete All Secrets in PRD. 2. Create Application Secrets in PRD.'
                     sh """
@@ -260,9 +265,10 @@ podTemplate(
                     sh """
                     echo 'oc create secret generic bt-helpline-secret --from-literal=database-password="${DATABASE_PWD}" --from-literal=keybase="${KEYBASE}"'
                     """ 
-                } else if (env.BRANCH_NAME == 'develop' || env.BRANCH_NAME == 'stage' || \
-                    (env.BRANCH_NAME.contains(REL_TAG_FILTER) && GIT_COMMIT_HEAD_TAG.contains(REL_TAG_FILTER)) || \
-                    (env.BRANCH_NAME.contains(REL_TAG_FILTER) && GIT_COMMIT_HEAD_TAG.contains(REL_TAG_FILTER))) {
+                } else if (RELEASE_TYPE == 'develop' || \
+                    RELEASE_TYPE == 'stage' || \
+                    RELEASE_TYPE == 'release' || \
+                    RELEASE_TYPE == 'hotfix') {
                     //Both Build and Application/Deployment Secret
                     
                     echo '1. Delete All Secrets in TST. 2. Create Image build secretsin TST. 3. Create Application Secrets in TST.'
@@ -280,11 +286,11 @@ podTemplate(
             }
 
             stage('Build Image') {
-                if (env.BRANCH_NAME == 'develop' || env.BRANCH_NAME == 'stage' \
-                    || (env.BRANCH_NAME.contains(REL_TAG_FILTER) && GIT_COMMIT_HEAD_TAG.contains(REL_TAG_FILTER)) \
-                    || (env.BRANCH_NAME.contains(HOT_TAG_FILTER) && GIT_COMMIT_HEAD_TAG.contains(HOT_TAG_FILTER)) \
-                   ) {
-                    echo 'Build on ' + env.BRANCH_NAME
+                if (RELEASE_TYPE == 'develop' || \
+                    RELEASE_TYPE == 'stage' || \
+                    RELEASE_TYPE == 'release' ||\
+                    RELEASE_TYPE == 'hotfix') {
+                    echo 'Build on ' + RELEASE_TYPE
                     echo 'Full Image Name:' + IMAGE_BUILD_FULL_NAME
 
                     //Image Tag is already set in BuildConfig (need "special" one for HotFix in Release Environment)
@@ -295,13 +301,12 @@ podTemplate(
                 } 
             }
             stage('Image Management') {
-                if ((env.BRANCH_NAME.contains(REL_TAG_FILTER) && GIT_COMMIT_HEAD_TAG.contains(REL_TAG_FILTER)) \
-                    || (env.BRANCH_NAME.contains(HOT_TAG_FILTER) && GIT_COMMIT_HEAD_TAG.contains(HOT_TAG_FILTER))) {
+                if (RELEASE_TYPE == 'release' || RELEASE_TYPE == 'hotfix') {
                     echo 'Tag Image as ' + IMAGE_BUILD_SECONDARY_TAG + 'also'
                     // This is already set in the beginning configuration section, but could be done here.
                     //IMAGE_BUILD_SECONDARY_TAG = REL_OS_PROJECT + '/' + IMAGE_NAME + ':' + APP_VERSION
                     sh "echo 'oc tag ${IMAGE_BUILD_FULL_NAME} ${IMAGE_BUILD_SECONDARY_TAG}'"
-                } else if (env.BRANCH_NAME == 'master') {
+                } else if (RELEASE_TYPE == 'master') {
                     // This is already set in the beginning configuration section, but could be done here.
                     //IMAGE_BUILD_SECONDARY_TAG = PRD_OS_PROJECT + '/' + IMAGE_NAME + ':' + APP_VERSION
                     sh "echo 'oc tag ${IMAGE_BUILD_FULL_NAME} ${IMAGE_BUILD_SECONDARY_TAG}'"
@@ -330,18 +335,18 @@ podTemplate(
                     """
                 }
                 stage('Helm Versioning') {
-                    if (env.BRANCH_NAME == 'develop' || env.BRANCH_NAME == 'stage') {
+                    if (RELEASE_TYPE == 'develop' || RELEASE_TYPE == 'stage') {
                         //Just version the appVersion for clarity, no "real" purpose.
                         def chartYaml = readYaml file: 'helm/helpline/Chart.yaml'
                         HELM_CHART_VERSION = chartYaml.version.toString()
                         def appVersion = chartYaml.appVersion.toString()
-                        chartYaml.appVersion = env.BRANCH_NAME  +'-'+GIT_SHORT_COMMIT
+                        chartYaml.appVersion = RELEASE_TYPE  +'-'+GIT_SHORT_COMMIT
                         echo 'Current: HELM_CHART_VERSION:'+HELM_CHART_VERSION+'appVersion:'+appVersion
 
                         sh "rm -f helm/helpline/Chart.yaml"
                         writeYaml file: "helm/helpline/Chart.yaml", data: chartYaml
 
-                    } else if (env.BRANCH_NAME == 'master') {
+                    } else if (RELEASE_TYPE == 'master') {
                         //App and Chart Version
                         def chartYaml = readYaml file: 'helm/helpline/Chart.yaml'
                         def valuesYaml = readYaml file: 'helm/helpline/values.yaml'
@@ -364,7 +369,7 @@ podTemplate(
                         writeYaml file: "helm/helpline/Chart.yaml", data: chartYaml
 
 
-                    } else if ((env.BRANCH_NAME.contains(HOT_TAG_FILTER) && GIT_COMMIT_HEAD_TAG.contains(HOT_TAG_FILTER)) || (env.BRANCH_NAME.contains(REL_TAG_FILTER) && GIT_COMMIT_HEAD_TAG.contains(REL_TAG_FILTER))){
+                    } else if (RELEASE_TYPE == 'release' || RELEASE_TYPE == 'hotfix'){
 
                        //App and Chart Version
                         def chartYaml = readYaml file: 'helm/helpline/Chart.yaml'
@@ -389,7 +394,7 @@ podTemplate(
                     } 
                 }
                 stage('Package Helm and Push to ChartMuseum'){
-                    if(env.BRANCH_NAME == 'master') {
+                    if(RELEASE_TYPE == 'master') {
                         sh """
                         echo "helm package ${HELM_CHART_LOCATION} -d ${HELM_TGZ_DEST_DIR}"
                         """
@@ -404,7 +409,7 @@ podTemplate(
                  }
                 stage ('Deploy with Helm') {
                     //Could make this a "configuration step, and just set all remaining values before a global "deploy"
-                    if (env.BRANCH_NAME == 'master'){
+                    if (RELEASE_TYPE == 'master'){
                         //Set Full path of TGZ
                         //def TGZ_PATH = HELM_TGZ_DEST_DIR + '/' + PACKAGE_NAME 
                         
@@ -423,12 +428,12 @@ podTemplate(
                         
                         echo 'Deploy Production with helm to ' + DEPLOY_OS_PROJECT + ' with tag:' + DEPLOY_IMAGE_NAME
                         sh 'helm --help'
-                    } else if (env.BRANCH_NAME.contains(HOT_TAG_FILTER) && GIT_COMMIT_HEAD_TAG.contains(HOT_TAG_FILTER)) {
+                    } else if (RELEASE_TYPE == 'hotfix') {
                        //No deploy for Helm.  Could deploy into PRD off this (instead of merging to master.  Not sure I like)
                        //Could deploy into Hot Fix environment, build one on the fly, or into Release.
                         echo 'No deploy for HotFix.'
                         
-                    } else if (env.BRANCH_NAME == 'develop' || env.BRANCH_NAME == 'stage' || (env.BRANCH_NAME.contains(REL_TAG_FILTER) && GIT_COMMIT_HEAD_TAG.contains(REL_TAG_FILTER))){
+                    } else if (RELEASE_TYPE == 'develop' || RELEASE_TYPE == 'stage' || RELEASE_TYPE == 'release'){
                         echo 'Deploy with helm to ' + DEPLOY_OS_PROJECT + ' with tag:' + DEPLOY_IMAGE_TAG
 
                         sh """
@@ -445,18 +450,18 @@ podTemplate(
                 }
                 stage('Post-Deploy Verification') {
                     container('jnlp') {
-                        if (env.BRANCH_NAME == 'master') {
+                        if (RELEASE_TYPE == 'master') {
                             echo 'Post Deploy Verfication for Master'
                             sh """
                             echo 'oc -n ${DEPLOY_OS_PROJECT} rollout status deployment api'
                             """
-                        } else if (env.BRANCH_NAME == 'develop'){
+                        } else if (RELEASE_TYPE == 'develop'){
                             echo 'Post Deploy Verfication for Develop'
-                        } else if (env.BRANCH_NAME == 'stage'){
+                        } else if (RELEASE_TYPE == 'stage'){
                             echo 'Post Deploy Verfication for Stage'
-                        } else if (env.BRANCH_NAME.contains(REL_TAG_FILTER) && GIT_COMMIT_HEAD_TAG.contains(REL_TAG_FILTER)){
+                        } else if (RELEASE_TYPE == 'release'){
                             echo 'Post Deploy Verfication for Release'
-                        } else if (env.BRANCH_NAME.contains(HOT_TAG_FILTER) && GIT_COMMIT_HEAD_TAG.contains(HOT_TAG_FILTER)){
+                        } else if (RELEASE_TYPE == 'hotfix'){
                             echo 'Post Deploy Verfication for HotFix'
                         } 
                     }
@@ -464,33 +469,33 @@ podTemplate(
                 stage('Post-Deploy Jobs') {
                     //Could be run by Helm as Jobs, or by OpenShift using 'oc apply'
                     container('jnlp') {
-                        if (env.BRANCH_NAME == 'master') {
+                        if (RELEASE_TYPE == 'master') {
                             echo 'Post Deploy Jobs for Master'
                             sh """
                             echo 'oc apply -f k8/post-upgrade-job.yml --namespace ${DEPLOY_OS_PROJECT}'
                             """
-                        } else if (env.BRANCH_NAME == 'develop'){
+                        } else if (RELEASE_TYPE == 'develop'){
                             echo 'Post Deploy Jobs for Develop'
-                        } else if (env.BRANCH_NAME == 'stage'){
+                        } else if (RELEASE_TYPE == 'stage'){
                             echo 'Post Deploy Jobs for Stage'
-                        } else if (env.BRANCH_NAME.contains(REL_TAG_FILTER) && GIT_COMMIT_HEAD_TAG.contains(REL_TAG_FILTER)){
+                        } else if (RELEASE_TYPE.contains(REL_TAG_FILTER) && GIT_COMMIT_HEAD_TAG.contains(REL_TAG_FILTER)){
                             echo 'Post Deploy Jobs for Release'
-                        } else if (env.BRANCH_NAME.contains(HOT_TAG_FILTER) && GIT_COMMIT_HEAD_TAG.contains(HOT_TAG_FILTER)){
+                        } else if (RELEASE_TYPE.contains(HOT_TAG_FILTER) && GIT_COMMIT_HEAD_TAG.contains(HOT_TAG_FILTER)){
                             echo 'Post Deploy Jobs for HotFix'
                         } 
                     }
                 }                
                 stage('JIRA') {
                     container('jnlp') {
-                        if (env.BRANCH_NAME == 'master') {
+                        if (RELEASE_TYPE == 'master') {
                             echo 'JIRA Update of Issue/Ticket that its available in Production'
-                        } else if (env.BRANCH_NAME == 'develop'){
+                        } else if (RELEASE_TYPE == 'develop'){
                             echo 'No Update'
-                        } else if (env.BRANCH_NAME == 'stage'){
+                        } else if (RELEASE_TYPE == 'stage'){
                             echo 'No Update'
-                        } else if (env.BRANCH_NAME.contains(REL_TAG_FILTER) && GIT_COMMIT_HEAD_TAG.contains(REL_TAG_FILTER)){
+                        } else if (RELEASE_TYPE.contains(REL_TAG_FILTER) && GIT_COMMIT_HEAD_TAG.contains(REL_TAG_FILTER)){
                             echo 'JIRA Update of Issue/Ticket that its available for Testing'
-                        } else if (env.BRANCH_NAME.contains(HOT_TAG_FILTER) && GIT_COMMIT_HEAD_TAG.contains(HOT_TAG_FILTER)){
+                        } else if (RELEASE_TYPE.contains(HOT_TAG_FILTER) && GIT_COMMIT_HEAD_TAG.contains(HOT_TAG_FILTER)){
                             echo 'No Update'
                         } 
                     }
