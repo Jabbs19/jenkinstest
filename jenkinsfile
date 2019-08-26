@@ -20,9 +20,9 @@ def STG_IMAGE_TAG = "feature"
 def STG_HELM_VALUES_LOC = "helm/helpline/values.yaml"
 
 //HotFix Variables (Not all needed unless deploying.)
-//def OS_HOTFIX_PROJECT = "psd-helpline-hot"
+//def HOT_OS_PROJECT = "psd-helpline-hot"
 def HOT_IMAGE_TAG = "hotfix"
-//def STG_HELM_VALUES_LOC = "helm/helpline/values-hot.yaml"
+//def HOT_HELM_VALUES_LOC = "helm/helpline/values-hot.yaml"
 
 //Git Variables
 def REL_TAG_FILTER="release-m-"
@@ -104,14 +104,11 @@ podTemplate(
                 if (env.BRANCH_NAME == 'master') {
                     echo 'Executing on Master'
                     RELEASE_TYPE = 'master'
-                    IMAGE_BUILD_OS_PROJECT = ""
-                    IMAGE_BUILD_TAG = ""
                     DEPLOY_OS_PROJECT = PRD_OS_PROJECT
                     DEPLOY_IMAGE_TAG = APP_VERSION
                     DEPLOY_IMAGE_NAME = DEPLOY_OS_PROJECT + '/' + IMAGE_NAME + ':' + DEPLOY_IMAGE_TAG
                     HELM_RELEASE_NAME_FINAL = HELM_CHARTNAME + '-prd'
                     HELM_YAML_LOCATION_FINAL = PRD_HELM_VALUES_LOC
-                    IMAGE_BUILD_SECONDARY_TAG = PRD_OS_PROJECT + '/' + IMAGE_NAME + ':' + APP_VERSION
                     //Tags for Master Release Checks.  Could add more filters, sig checks, etc.
                     if (GIT_COMMIT_HEAD_TAG == "") {
                         error "No Git Version at Master Head"
@@ -125,7 +122,6 @@ podTemplate(
                     DEPLOY_IMAGE_TAG = DEV_IMAGE_TAG
                     HELM_YAML_LOCATION_FINAL = DEV_HELM_VALUES_LOC
                     HELM_RELEASE_NAME_FINAL = HELM_CHARTNAME + '-dev'
-                    IMAGE_BUILD_SECONDARY_TAG = ""
 
                 } else if (env.BRANCH_NAME == 'stage'){
                     echo 'Execute on Stage'
@@ -136,7 +132,6 @@ podTemplate(
                     DEPLOY_IMAGE_TAG = STG_IMAGE_TAG
                     HELM_YAML_LOCATION_FINAL = STG_HELM_VALUES_LOC
                     HELM_RELEASE_NAME_FINAL = HELM_CHARTNAME + '-stg'
-                    IMAGE_BUILD_SECONDARY_TAG = ""
 
                 } else if (env.BRANCH_NAME.contains(REL_TAG_FILTER) && GIT_COMMIT_HEAD_TAG.contains(REL_TAG_FILTER)){
                     echo 'Execute on specific "Release" Tag of:' + REL_TAG_FILTER
@@ -147,7 +142,6 @@ podTemplate(
                     DEPLOY_IMAGE_TAG = APP_VERSION
                     HELM_YAML_LOCATION_FINAL = REL_HELM_VALUES_LOC
                     HELM_RELEASE_NAME_FINAL = HELM_CHARTNAME + '-rel'
-                    IMAGE_BUILD_SECONDARY_TAG = DEPLOY_OS_PROJECT + '/' + IMAGE_NAME + ':' + APP_VERSION
 
                     if (GIT_COMMIT_HEAD_TAG == "") {
                         error "No Git Version at Commit Head"
@@ -158,11 +152,10 @@ podTemplate(
                     RELEASE_TYPE = 'hotfix'
                     IMAGE_BUILD_OS_PROJECT = REL_OS_PROJECT
                     IMAGE_BUILD_TAG = HOT_IMAGE_TAG
-                    DEPLOY_OS_PROJECT = REL_OS_PROJECT //Doesn't actually deploy.
+                    DEPLOY_OS_PROJECT = REL_OS_PROJECT                  //Doesn't actually deploy.
                     DEPLOY_IMAGE_TAG = APP_VERSION
                     HELM_YAML_LOCATION_FINAL = PRD_HELM_VALUES_LOC
                     HELM_RELEASE_NAME_FINAL = HELM_CHARTNAME + '-hot'  //Doesn't actually deploy or use helm.
-                    IMAGE_BUILD_SECONDARY_TAG = DEPLOY_OS_PROJECT + '/' + IMAGE_NAME + ':' + APP_VERSION
                     if (GIT_COMMIT_HEAD_TAG == "") {
                         error "No Git Version at Commit Head"
                     } 
@@ -263,9 +256,6 @@ podTemplate(
                     sh """
                     echo 'oc project ${DEPLOY_OS_PROJECT}'
                     echo 'oc delete secret "bt-helpline-secret" -n ${DEPLOY_OS_PROJECT}'
-                    """
-
-                    sh """
                     echo 'oc create secret generic bt-helpline-secret --from-literal=database-password="${DATABASE_PWD}" --from-literal=keybase="${KEYBASE}"'
                     """ 
                 } else if (RELEASE_TYPE == 'develop' || \
@@ -276,15 +266,17 @@ podTemplate(
                     
                     echo '1. Delete All Secrets in TST. 2. Create Image build secretsin TST. 3. Create Application Secrets in TST.'
                     sh """
-                    echo 'oc project ${DEPLOY_OS_PROJECT}'
+                    echo 'oc project ${BUILD_OS_PROJECT}'
                     echo 'oc delete secret "bt-helpline-secret-rails" -n ${IMAGE_BUILD_OS_PROJECT}'
-                    echo 'oc delete secret "bt-helpline-secret" -n ${DEPLOY_OS_PROJECT}'
-                    """               
+                    echo 'oc create secret generic bt-helpline-secret-rails --from-literal=RAILS_MASTER_KEY="${RAILS_MASTER_KEY}"'
+                    """
 
                     sh """
-                    echo 'oc create secret generic bt-helpline-secret-rails --from-literal=RAILS_MASTER_KEY="${RAILS_MASTER_KEY}"'
+                    echo 'oc project ${DEPLOY_OS_PROJECT}'
+                    echo 'oc delete secret "bt-helpline-secret" -n ${DEPLOY_OS_PROJECT}'
                     echo 'oc create secret generic bt-helpline-secret --from-literal=database-password="${DATABASE_PWD}" --from-literal=keybase="${KEYBASE}"'                    
-                    """ 
+
+                    """               
                 }
             }
 
@@ -305,15 +297,12 @@ podTemplate(
             }
             stage('Image Management') {
                 if (RELEASE_TYPE == 'release' || RELEASE_TYPE == 'hotfix') {
-                    echo 'Tag Image as ' + IMAGE_BUILD_SECONDARY_TAG + 'also'
                     // This is already set in the beginning configuration section, but could be done here.
-                    //IMAGE_BUILD_SECONDARY_TAG = REL_OS_PROJECT + '/' + IMAGE_NAME + ':' + APP_VERSION
                     def SOURCE_TAG = REL_OS_PROJECT + '/' + IMAGE_NAME + ':' + REL_IMAGE_TAG
                     def DEST_TAG = REL_OS_PROJECT + '/' + IMAGE_NAME + ':' + APP_VERSION
                     sh "echo 'oc tag ${SOURCE_TAG} ${DEST_TAG}'"
                 } else if (RELEASE_TYPE == 'master') {
                     // This is already set in the beginning configuration section, but could be done here.
-                    //IMAGE_BUILD_SECONDARY_TAG = PRD_OS_PROJECT + '/' + IMAGE_NAME + ':' + APP_VERSION
                     def SOURCE_TAG = REL_OS_PROJECT + '/' + IMAGE_NAME + ':' + APP_VERSION
                     def DEST_TAG = PRD_OS_PROJECT + '/' + IMAGE_NAME + ':' + APP_VERSION
                     sh "echo 'oc tag ${SOURCE_TAG} ${DEST_TAG}'"
