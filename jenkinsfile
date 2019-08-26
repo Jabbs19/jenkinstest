@@ -282,7 +282,7 @@ podTemplate(
                     RELEASE_TYPE == 'release' ||\
                     RELEASE_TYPE == 'hotfix') {
                     echo 'Build on ' + RELEASE_TYPE
-                    echo 'Expected Build Image Name:' + IMAGE_BUILD_OS_PROJECT + '/' + IMAGE_NAME + ':' IMAGE_BUILD_TAG
+                    echo 'Expected Build Image Name:' + IMAGE_BUILD_OS_PROJECT + '/' + IMAGE_NAME + ':' + IMAGE_BUILD_TAG
                     echo 'The Image Tag is set in the Build Config for this project: ${IMAGE_BUILD_OS_PROJECT}'
 
                     sh"""
