@@ -25,8 +25,8 @@ def HOT_IMAGE_TAG = "hotfix"
 //def HOT_HELM_VALUES_LOC = "helm/helpline/values-hot.yaml"
 
 //Git Variables
-def GIT_REL_TAG_FILTER="release-m-"
-def GIT_HOT_TAG_FILTER = "hotfix-m-"    
+def GIT_REL_TAG_FILTER="release-mj-"
+def GIT_HOT_TAG_FILTER = "hotfix-mj-"    
 def GIT_COMMIT_HEAD_TAG = ""            //Git Tag at HEAD of Branch
 def GIT_SHORT_COMMIT = ""               //Git Short Commit (e.g. 1574ga2)
 def GIT_PARSED_APP_VERSION = ""         //Parsed AppVersion (after stripping Tag Identifiers)
@@ -204,19 +204,7 @@ podTemplate(
                 } else if (RELEASE_TYPE == 'stage'){
                     echo 'No Unit Test'
                 } else if (RELEASE_TYPE == 'release'){
-                    echo 'Execute Unit Tests'
-                    //Should this be parameterized for RAILS_ENV
-
-                    //Fake Data:
-                    def RAILS_MASTER_KEY = '4174071407141'
-
-                    sh """
-                    echo 'bundle install'
-                    echo 'rake db:create RAILS_ENV=test'
-                    echo 'rake db:migrate RAILS_ENV=test'
-                    echo 'RAILS_MASTER_KEY=${RAILS_MASTER_KEY} rake db:test:prepare'
-                    echo 'RAILS_MASTER_KEY=${RAILS_MASTER_KEY} rspec'
-                    """
+                    echo 'No Unit Test'
                 } else if (RELEASE_TYPE == 'hotfix'){
                     echo 'No Unit Test'
                 } 
@@ -227,11 +215,11 @@ podTemplate(
                 if (RELEASE_TYPE == 'master') {
                     echo 'No Checkmarx'
                 } else if (RELEASE_TYPE == 'develop'){
-                    echo 'No Checkmarx'
+                    echo 'Execute Checkmarx'
                 } else if (RELEASE_TYPE == 'stage'){
                     echo 'No Checkmarx'
                 } else if (RELEASE_TYPE == 'release'){
-                    echo 'Execute Checkmarx'
+                    echo 'No Checkmarx'
                 } else if (RELEASE_TYPE == 'hotfix'){
                     echo 'No Checkmarx'
                 } 
@@ -262,7 +250,6 @@ podTemplate(
 
                 if (RELEASE_TYPE == 'develop' || \
                     RELEASE_TYPE == 'stage' || \
-                    RELEASE_TYPE == 'release' || \
                     RELEASE_TYPE == 'hotfix') {
                     //Build Secrets
                     sh """
@@ -291,31 +278,29 @@ podTemplate(
                 def DEST_TAG = ""
                 if (RELEASE_TYPE == 'release' || RELEASE_TYPE == 'hotfix') {
                     //"Pre-tags" image for deployments.
-                    //Image tags for tagging a :release/:hotfix as the Git Version number.
                     SOURCE_TAG = DEV_OS_PROJECT + '/' + IMAGE_NAME + ':' + DEV_IMAGE_TAG + '-' + GIT_SHORT_COMMIT
                     DEST_TAG = REL_OS_PROJECT + '/' + IMAGE_NAME + ':' + GIT_SHORT_COMMIT
                     sh "echo 'oc tag ${SOURCE_TAG} ${DEST_TAG}'"
+                    
                     SOURCE_TAG = DEV_OS_PROJECT + '/' + IMAGE_NAME + ':' + DEV_IMAGE_TAG + '-' + GIT_SHORT_COMMIT
                     DEST_TAG = REL_OS_PROJECT + '/' + IMAGE_NAME + ':' + REL_IMAGE_TAG
                     sh "echo 'oc tag ${SOURCE_TAG} ${DEST_TAG}'"
+                    
                     SOURCE_TAG = DEV_OS_PROJECT + '/' + IMAGE_NAME + ':' + DEV_IMAGE_TAG + '-' + GIT_SHORT_COMMIT
                     DEST_TAG = REL_OS_PROJECT + '/' + IMAGE_NAME + ':' + GIT_PARSED_APP_VERSION
                     sh "echo 'oc tag ${SOURCE_TAG} ${DEST_TAG}'"
                 } else if (RELEASE_TYPE == 'develop') {
                     //"Post Tags" for future use by release.
-                    //Tag as Git Commit Short
                     SOURCE_TAG = DEV_OS_PROJECT + '/' + IMAGE_NAME + ':' + DEV_IMAGE_TAG
                     DEST_TAG = DEV_OS_PROJECT + '/' + IMAGE_NAME + ':' + DEV_IMAGE_TAG + '-' + GIT_SHORT_COMMIT
                     sh "echo 'oc tag ${SOURCE_TAG} ${DEST_TAG}'"
                 }
                 else if (RELEASE_TYPE == 'master') {
                     //"Pre-tags" image for deployments.
-
-                    //Image tags for tagging the image in release (by Git Version) into Production environment.
                     SOURCE_TAG = REL_OS_PROJECT + '/' + IMAGE_NAME + ':' + GIT_PARSED_APP_VERSION
                     DEST_TAG = PRD_OS_PROJECT + '/' + IMAGE_NAME + ':' + GIT_PARSED_APP_VERSION
                     sh "echo 'oc tag ${SOURCE_TAG} ${DEST_TAG}'"
-                    //Image tags for tagging the Git Version image as :production
+
                     SOURCE_TAG = REL_OS_PROJECT + '/' + IMAGE_NAME + ':' + GIT_PARSED_APP_VERSION
                     DEST_TAG = PRD_OS_PROJECT + '/' + IMAGE_NAME + ':' + PRD_IMAGE_TAG
                     sh "echo 'oc tag ${SOURCE_TAG} ${DEST_TAG}'"
