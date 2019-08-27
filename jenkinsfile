@@ -26,13 +26,13 @@ def HOT_IMAGE_TAG = "hotfix"
 
 //Git Variables
 def GIT_REL_TAG_FILTER="release-m-"
-def GIT_HOT_TAG_FILTER = "hotfix-m-"
-def GIT_COMMIT_HEAD_TAG = ""        //Git Tag at HEAD of Branch
-def GIT_SHORT_COMMIT = ""           //Git Short Commit (e.g. 1574ga2)
-def GIT_PARSED_APP_VERSION = ""     //Parsed AppVersion (after stripping Tag Identifiers)
+def GIT_HOT_TAG_FILTER = "hotfix-m-"    
+def GIT_COMMIT_HEAD_TAG = ""            //Git Tag at HEAD of Branch
+def GIT_SHORT_COMMIT = ""               //Git Short Commit (e.g. 1574ga2)
+def GIT_PARSED_APP_VERSION = ""         //Parsed AppVersion (after stripping Tag Identifiers)
 
 //Image Variables
-def IMAGE_NAME = "helpline"
+def IMAGE_NAME = "helpline"         //
 def IMAGE_BUILD_OS_PROJECT = ""     //OpenShift Project (aka Repo) (e.g. psd-helpline-tst)
 def IMAGE_BUILD_TAG = ""            //Image Tag created on Build (e.g. :test
 def IMAGE_DEPLOY_TAG = ""           //Image Tag used in Deployment (e.g. :test, or :v1.4a for some environments.)
@@ -107,7 +107,7 @@ podTemplate(
                     if (GIT_COMMIT_HEAD_TAG == "") {
                         error "No Git Version at Commit Head"
                     } else {
-                    HELM_APP_VERSION_FINAL = GIT_PARSED_APP_VERSION
+                        HELM_APP_VERSION_FINAL = GIT_PARSED_APP_VERSION
                     }
                 } else if (env.BRANCH_NAME == 'develop'){
                     echo 'Execute on Develop'
