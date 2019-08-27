@@ -287,31 +287,33 @@ podTemplate(
                 } 
             }
             stage('Image Management') {
+                def SOURCE_TAG = ""
+                def DEST_TAG = ""
                 if (RELEASE_TYPE == 'release' || RELEASE_TYPE == 'hotfix') {
                     //"Pre-tags" image for deployments.
                     //Image tags for tagging a :release/:hotfix as the Git Version number.
-                    def SOURCE_TAG = DEV_OS_PROJECT + '/' + IMAGE_NAME + ':' + GIT_SHORT_COMMIT
-                    def DEST_TAG = REL_OS_PROJECT + '/' + IMAGE_NAME + ':' + GIT_SHORT_COMMIT
+                    SOURCE_TAG = DEV_OS_PROJECT + '/' + IMAGE_NAME + ':' + GIT_SHORT_COMMIT
+                    DEST_TAG = REL_OS_PROJECT + '/' + IMAGE_NAME + ':' + GIT_SHORT_COMMIT
                     sh "echo 'oc tag ${SOURCE_TAG} ${DEST_TAG}'"
-                    def SOURCE_TAG = DEV_OS_PROJECT + '/' + IMAGE_NAME + ':' + GIT_SHORT_COMMIT
-                    def DEST_TAG = REL_OS_PROJECT + '/' + IMAGE_NAME + ':' + REL_IMAGE_TAG
+                    SOURCE_TAG = DEV_OS_PROJECT + '/' + IMAGE_NAME + ':' + GIT_SHORT_COMMIT
+                    DEST_TAG = REL_OS_PROJECT + '/' + IMAGE_NAME + ':' + REL_IMAGE_TAG
                     sh "echo 'oc tag ${SOURCE_TAG} ${DEST_TAG}'"
-                    def SOURCE_TAG = DEV_OS_PROJECT + '/' + IMAGE_NAME + ':' + GIT_SHORT_COMMIT
-                    def DEST_TAG = REL_OS_PROJECT + '/' + IMAGE_NAME + ':' + GIT_PARSED_APP_VERSION
+                    SOURCE_TAG = DEV_OS_PROJECT + '/' + IMAGE_NAME + ':' + GIT_SHORT_COMMIT
+                    DEST_TAG = REL_OS_PROJECT + '/' + IMAGE_NAME + ':' + GIT_PARSED_APP_VERSION
                     sh "echo 'oc tag ${SOURCE_TAG} ${DEST_TAG}'"
                 } else if (RELEASE_TYPE == 'develop') {
                     //"Post Tags" for future use by release.
                     //Tag as Git Commit Short
-                    def SOURCE_TAG = DEV_OS_PROJECT + '/' + IMAGE_NAME + ':' + DEV_IMAGE_TAG
-                    def DEST_TAG = DEV_OS_PROJECT + '/' + IMAGE_NAME + ':' + GIT_SHORT_COMMIT
+                    SOURCE_TAG = DEV_OS_PROJECT + '/' + IMAGE_NAME + ':' + DEV_IMAGE_TAG
+                    DEST_TAG = DEV_OS_PROJECT + '/' + IMAGE_NAME + ':' + GIT_SHORT_COMMIT
                     sh "echo 'oc tag ${SOURCE_TAG} ${DEST_TAG}'"
                 }
                 else if (RELEASE_TYPE == 'master') {
                     //"Pre-tags" image for deployments.
 
                     //Image tags for tagging the image in release (by Git Version) into Production environment.
-                    def SOURCE_TAG = REL_OS_PROJECT + '/' + IMAGE_NAME + ':' + GIT_PARSED_APP_VERSION
-                    def DEST_TAG = PRD_OS_PROJECT + '/' + IMAGE_NAME + ':' + GIT_PARSED_APP_VERSION
+                    SOURCE_TAG = REL_OS_PROJECT + '/' + IMAGE_NAME + ':' + GIT_PARSED_APP_VERSION
+                    DEST_TAG = PRD_OS_PROJECT + '/' + IMAGE_NAME + ':' + GIT_PARSED_APP_VERSION
                     sh "echo 'oc tag ${SOURCE_TAG} ${DEST_TAG}'"
                     //Image tags for tagging the Git Version image as :production
                     SOURCE_TAG = REL_OS_PROJECT + '/' + IMAGE_NAME + ':' + GIT_PARSED_APP_VERSION
