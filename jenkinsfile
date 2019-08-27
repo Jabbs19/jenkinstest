@@ -279,7 +279,7 @@ podTemplate(
                 if (RELEASE_TYPE == 'release' || RELEASE_TYPE == 'hotfix') {
                     //"Pre-tags" image for deployments.
                     SOURCE_TAG = DEV_OS_PROJECT + '/' + IMAGE_NAME + ':' + DEV_IMAGE_TAG + '-' + GIT_SHORT_COMMIT
-                    DEST_TAG = REL_OS_PROJECT + '/' + IMAGE_NAME + ':' + GIT_SHORT_COMMIT
+                    DEST_TAG = REL_OS_PROJECT + '/' + IMAGE_NAME + ':' + REL_IMAGE_TAG + '-' + GIT_SHORT_COMMIT
                     sh "echo 'oc tag ${SOURCE_TAG} ${DEST_TAG}'"
                     
                     SOURCE_TAG = DEV_OS_PROJECT + '/' + IMAGE_NAME + ':' + DEV_IMAGE_TAG + '-' + GIT_SHORT_COMMIT
