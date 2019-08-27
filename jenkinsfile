@@ -292,20 +292,20 @@ podTemplate(
                 if (RELEASE_TYPE == 'release' || RELEASE_TYPE == 'hotfix') {
                     //"Pre-tags" image for deployments.
                     //Image tags for tagging a :release/:hotfix as the Git Version number.
-                    SOURCE_TAG = DEV_OS_PROJECT + '/' + IMAGE_NAME + ':' + GIT_SHORT_COMMIT
+                    SOURCE_TAG = DEV_OS_PROJECT + '/' + IMAGE_NAME + ':' + DEV_IMAGE_TAG + '-' + GIT_SHORT_COMMIT
                     DEST_TAG = REL_OS_PROJECT + '/' + IMAGE_NAME + ':' + GIT_SHORT_COMMIT
                     sh "echo 'oc tag ${SOURCE_TAG} ${DEST_TAG}'"
-                    SOURCE_TAG = DEV_OS_PROJECT + '/' + IMAGE_NAME + ':' + GIT_SHORT_COMMIT
+                    SOURCE_TAG = DEV_OS_PROJECT + '/' + IMAGE_NAME + ':' + DEV_IMAGE_TAG + '-' + GIT_SHORT_COMMIT
                     DEST_TAG = REL_OS_PROJECT + '/' + IMAGE_NAME + ':' + REL_IMAGE_TAG
                     sh "echo 'oc tag ${SOURCE_TAG} ${DEST_TAG}'"
-                    SOURCE_TAG = DEV_OS_PROJECT + '/' + IMAGE_NAME + ':' + GIT_SHORT_COMMIT
+                    SOURCE_TAG = DEV_OS_PROJECT + '/' + IMAGE_NAME + ':' + DEV_IMAGE_TAG + '-' + GIT_SHORT_COMMIT
                     DEST_TAG = REL_OS_PROJECT + '/' + IMAGE_NAME + ':' + GIT_PARSED_APP_VERSION
                     sh "echo 'oc tag ${SOURCE_TAG} ${DEST_TAG}'"
                 } else if (RELEASE_TYPE == 'develop') {
                     //"Post Tags" for future use by release.
                     //Tag as Git Commit Short
                     SOURCE_TAG = DEV_OS_PROJECT + '/' + IMAGE_NAME + ':' + DEV_IMAGE_TAG
-                    DEST_TAG = DEV_OS_PROJECT + '/' + IMAGE_NAME + ':' + GIT_SHORT_COMMIT
+                    DEST_TAG = DEV_OS_PROJECT + '/' + IMAGE_NAME + ':' + DEV_IMAGE_TAG + '-' + GIT_SHORT_COMMIT
                     sh "echo 'oc tag ${SOURCE_TAG} ${DEST_TAG}'"
                 }
                 else if (RELEASE_TYPE == 'master') {
